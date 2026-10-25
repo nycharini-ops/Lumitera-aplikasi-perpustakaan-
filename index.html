@@ -152,6 +152,35 @@
         .dash-wrap table .font-mono { color: #fde68a !important; }
         .dash-wrap table .bg-emerald-50, .dash-wrap table .bg-rose-50, .dash-wrap table .bg-amber-50, .dash-wrap table .bg-indigo-50, .dash-wrap table .bg-slate-100 { text-shadow: none !important; }
         .dash-wrap table tbody tr:hover { background-color: rgba(255,255,255,.12) !important; }
+
+        /* ===== Revisi 6: teks lebih cerah & lebih kontras ===== */
+        .auth-card { background: rgba(18,9,7,.46) !important; }
+        .dash-wrap main { background: rgba(18,9,7,.36); }
+        .dash-wrap > header, aside.bg-white { background: rgba(18,9,7,.58) !important; }
+        .dash-wrap .bg-white:not(button):not(input):not(select) { background-color: rgba(18,9,7,.52) !important; }
+        .glass-pop { background: rgba(18,9,7,.52) !important; }
+        /* semua teks: putih terang */
+        html body :is(.dash-wrap,.auth-card,.glass-pop) :where(*:not(input):not(select):not(textarea):not(option):not([class^="bg-"]):not([class*=" bg-"])) {
+            color: #ffffff !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,.95), 0 0 10px rgba(0,0,0,.55) !important;
+        }
+        html body :is(.dash-wrap,.auth-card,.glass-pop) h1:not([class^="bg-"]):not([class*=" bg-"]), html body :is(.dash-wrap,.auth-card,.glass-pop) h2:not([class^="bg-"]):not([class*=" bg-"]), html body :is(.dash-wrap,.auth-card,.glass-pop) h3:not([class^="bg-"]):not([class*=" bg-"]), html body :is(.dash-wrap,.auth-card,.glass-pop) h4:not([class^="bg-"]):not([class*=" bg-"]), html body :is(.dash-wrap,.auth-card,.glass-pop) th:not([class^="bg-"]):not([class*=" bg-"]) { font-weight: 800; }
+        html body :is(.dash-wrap,.auth-card,.glass-pop) p:not([class^="bg-"]):not([class*=" bg-"]), html body :is(.dash-wrap,.auth-card,.glass-pop) td:not([class^="bg-"]):not([class*=" bg-"]), html body :is(.dash-wrap,.auth-card,.glass-pop) label:not([class^="bg-"]):not([class*=" bg-"]), html body :is(.dash-wrap,.auth-card,.glass-pop) span:not([class^="bg-"]):not([class*=" bg-"]) { font-weight: 500; }
+        /* aksen cerah */
+        html body :is(.dash-wrap,.auth-card,.glass-pop) .text-indigo-600:not([class^="bg-"]):not([class*=" bg-"]), html body :is(.dash-wrap,.auth-card,.glass-pop) .text-indigo-700:not([class^="bg-"]):not([class*=" bg-"]), html body .dash-wrap table .font-mono:not([class^="bg-"]):not([class*=" bg-"]) { color: #fff3b0 !important; }
+        html body .dash-wrap .text-emerald-600:not([class^="bg-"]):not([class*=" bg-"]), html body .dash-wrap .text-emerald-700:not([class^="bg-"]):not([class*=" bg-"]) { color: #a7f3d0 !important; }
+        html body .dash-wrap .text-rose-600:not([class^="bg-"]):not([class*=" bg-"]), html body .dash-wrap .text-rose-700:not([class^="bg-"]):not([class*=" bg-"]) { color: #ffc2cc !important; }
+        html body .dash-wrap .text-amber-600:not([class^="bg-"]):not([class*=" bg-"]), html body .dash-wrap .text-amber-700:not([class^="bg-"]):not([class*=" bg-"]) { color: #fde68a !important; }
+        /* di atas latar terang (tombol kuning, badge pastel): teks gelap */
+        html body :is(.dash-wrap,.auth-card,.glass-pop).dash-wrap :is(.bg-indigo-600,.bg-indigo-50,.bg-indigo-100,.bg-emerald-50,.bg-rose-50,.bg-amber-50,.bg-slate-100,button.bg-white), html body :is(.dash-wrap,.auth-card,.glass-pop).dash-wrap :is(.bg-indigo-600,.bg-indigo-50,.bg-indigo-100,.bg-emerald-50,.bg-rose-50,.bg-amber-50,.bg-slate-100,button.bg-white) *,
+        html body .dash-wrap.dash-wrap :is(.bg-indigo-600,.bg-indigo-50,.bg-indigo-100,.bg-emerald-50,.bg-rose-50,.bg-amber-50,.bg-slate-100,button.bg-white), html body .dash-wrap.dash-wrap :is(.bg-indigo-600,.bg-indigo-50,.bg-indigo-100,.bg-emerald-50,.bg-rose-50,.bg-amber-50,.bg-slate-100,button.bg-white) *,
+        html body .auth-card.auth-card :is(.bg-indigo-600,.bg-indigo-50,.bg-indigo-100,.bg-emerald-50,.bg-rose-50,.bg-amber-50,.bg-slate-100,button.bg-white), html body .auth-card.auth-card :is(.bg-indigo-600,.bg-indigo-50,.bg-indigo-100,.bg-emerald-50,.bg-rose-50,.bg-amber-50,.bg-slate-100,button.bg-white) *,
+        html body .glass-pop.glass-pop :is(.bg-indigo-600,.bg-indigo-50,.bg-indigo-100,.bg-emerald-50,.bg-rose-50,.bg-amber-50,.bg-slate-100,button.bg-white), html body .glass-pop.glass-pop :is(.bg-indigo-600,.bg-indigo-50,.bg-indigo-100,.bg-emerald-50,.bg-rose-50,.bg-amber-50,.bg-slate-100,button.bg-white) * { color: #2b1d04 !important; text-shadow: none !important; }
+        html body .dash-wrap.dash-wrap :is(.bg-emerald-50,.bg-rose-50,.bg-amber-50) { color: #1f2937 !important; font-weight: 700; }
+        html body aside button[id^="adm-btn-"]:not(.bg-indigo-50), html body aside button[id^="adm-btn-"]:not(.bg-indigo-50) * { color: #ffffff !important; }
+        html body aside button[id^="adm-btn-"].bg-indigo-50, html body aside button[id^="adm-btn-"].bg-indigo-50 * { color: #2b1d04 !important; text-shadow: none !important; }
+        /* kolom isian */
+        html body input, html body select, html body textarea { color: #0b1220 !important; text-shadow: none !important; }
         html, body { height: 100%; }
         @supports (height: 100dvh) { html, body { height: 100dvh; } }
         body {
