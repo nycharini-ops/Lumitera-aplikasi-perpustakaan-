@@ -240,6 +240,19 @@
         </div>
 
         <!-- Image Preview Modal -->
+        <div id="return-modal" class="fixed inset-0 z-50 flex items-center justify-center pop-overlay hidden p-4">
+            <div class="glass-pop rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+                <h3 class="text-lg font-bold text-slate-900">Kembalikan Buku</h3>
+                <p id="return-modal-book" class="text-sm text-slate-600 mt-1 break-words"></p>
+                <label for="return-code-input" class="block text-sm font-semibold text-slate-700 mt-4 mb-1.5">Masukkan kode dari admin</label>
+                <input id="return-code-input" type="text" maxlength="6" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="••••••" class="w-full px-4 py-3 border rounded-xl text-center font-mono text-2xl font-bold tracking-[0.35em] uppercase focus:outline-none focus:ring-2" onkeydown="if(event.key==='Enter')submitReturnCode()">
+                <p id="return-code-error" class="text-sm font-semibold mt-2 min-h-[1.25rem]" style="color:#ffc2cc"></p>
+                <div class="flex justify-end gap-3 mt-3">
+                    <button onclick="closeReturnModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm transition">Batal</button>
+                    <button id="return-submit-btn" onclick="submitReturnCode()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm transition">Kembalikan</button>
+                </div>
+            </div>
+        </div>
         <div id="img-modal" class="fixed inset-0 z-50 flex items-center justify-center pop-overlay hidden" onclick="closeImgModal()">
             <div class="relative max-w-2xl max-h-[90dvh] p-2" onclick="event.stopPropagation()">
                 <button onclick="closeImgModal()" class="absolute top-3 right-3 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-black/60 text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
@@ -269,6 +282,33 @@
         function fmtDate(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
         function parseDate(str) { const [y, m, d] = String(str).split('-').map(Number); return new Date(y, m - 1, d); }
         function startOfToday() { const t = new Date(); t.setHours(0, 0, 0, 0); return t; }
+
+
+        // ---------- Kode pengembalian harian (berubah otomatis tiap hari, sama di semua perangkat) ----------
+        const RETURN_CODE_SALT = 'lumitera-sman15-bandung-2026';
+        function cyrb53(str, seed = 0) {
+            let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+            for (let i = 0, ch; i < str.length; i++) {
+                ch = str.charCodeAt(i);
+                h1 = Math.imul(h1 ^ ch, 2654435761);
+                h2 = Math.imul(h2 ^ ch, 1597334677);
+            }
+            h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+            h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+            return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+        }
+        function dailyReturnCode(d = new Date()) {
+            const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+            let n = cyrb53('LUMITERA|' + fmtDate(d) + '|' + RETURN_CODE_SALT), code = '';
+            for (let i = 0; i < 6; i++) { code += alphabet[n % alphabet.length]; n = Math.floor(n / alphabet.length); }
+            return code;
+        }
+        function copyReturnCode() {
+            const code = dailyReturnCode();
+            const done = () => { const b = document.getElementById('copy-code-label'); if (b) { b.innerText = 'Tersalin!'; setTimeout(() => { b.innerText = 'Salin Kode'; }, 1500); } };
+            if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(code).then(done, done); }
+            else { const t = document.createElement('textarea'); t.value = code; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (e) {} t.remove(); done(); }
+        }
 
         const STORAGE_KEY_USERS = 'lib_school_users';
         const STORAGE_KEY_BOOKS = 'lib_school_books';
@@ -791,33 +831,68 @@
             }).join('') + `</div>`;
         }
 
+        let pendingReturnId = null, returnFails = 0, returnLockUntil = 0;
         function returnBook(borrowId) {
-            showModal('Konfirmasi Pengembalian', 'Apakah Anda yakin ingin mengembalikan buku ini?', 'info', () => {
-                const borrowings = getDB(STORAGE_KEY_BORROW, []);
-                const idx = borrowings.findIndex(b => b.id === borrowId);
-                if (idx === -1) return;
+            const item = getDB(STORAGE_KEY_BORROW, []).find(b => b.id === borrowId);
+            if (!item) return;
+            pendingReturnId = borrowId;
+            document.getElementById('return-modal-book').innerText = '"' + item.judulBuku + '"';
+            document.getElementById('return-code-input').value = '';
+            document.getElementById('return-code-error').innerText = '';
+            document.getElementById('return-modal').classList.remove('hidden');
+            setTimeout(() => { try { document.getElementById('return-code-input').focus(); } catch (e) {} }, 50);
+        }
+        function closeReturnModal() {
+            document.getElementById('return-modal').classList.add('hidden');
+            pendingReturnId = null;
+        }
+        function submitReturnCode() {
+            const err = document.getElementById('return-code-error');
+            const input = document.getElementById('return-code-input');
+            const now = Date.now();
+            if (now < returnLockUntil) {
+                err.innerText = 'Terlalu banyak percobaan. Coba lagi dalam ' + Math.ceil((returnLockUntil - now) / 1000) + ' detik.';
+                return;
+            }
+            const entered = input.value.trim().toUpperCase();
+            if (!entered) { err.innerText = 'Kode wajib diisi.'; return; }
+            if (entered !== dailyReturnCode()) {
+                returnFails++;
+                if (returnFails >= 5) { returnLockUntil = now + 30000; returnFails = 0; err.innerText = 'Kode salah 5 kali. Coba lagi dalam 30 detik.'; }
+                else err.innerText = 'Kode salah. Minta kode hari ini kepada admin perpustakaan.';
+                input.select();
+                return;
+            }
+            returnFails = 0;
+            const id = pendingReturnId;
+            closeReturnModal();
+            performReturn(id);
+        }
+        function performReturn(borrowId) {
+            const borrowings = getDB(STORAGE_KEY_BORROW, []);
+            const idx = borrowings.findIndex(b => b.id === borrowId);
+            if (idx === -1) return;
 
-                const item = borrowings[idx];
-                item.returned = true;
-                item.returnedDate = fmtDate(new Date());
+            const item = borrowings[idx];
+            item.returned = true;
+            item.returnedDate = fmtDate(new Date());
 
-                const books = getDB(STORAGE_KEY_BOOKS, defaultBooks);
-                const book = books.find(b => b.code === item.codeBuku);
-                if (book) {
-                    book.stock += 1;
-                    saveDB(STORAGE_KEY_BOOKS, books);
-                }
+            const books = getDB(STORAGE_KEY_BOOKS, defaultBooks);
+            const book = books.find(b => b.code === item.codeBuku);
+            if (book) {
+                book.stock += 1;
+                saveDB(STORAGE_KEY_BOOKS, books);
+            }
 
-                const history = getDB(STORAGE_KEY_HISTORY, []);
-                history.unshift({ ...item, status: 'Dikembalikan' });
-                saveDB(STORAGE_KEY_HISTORY, history);
+            const history = getDB(STORAGE_KEY_HISTORY, []);
+            history.unshift({ ...item, status: 'Dikembalikan' });
+            saveDB(STORAGE_KEY_HISTORY, history);
 
-                borrowings.splice(idx, 1);
-                saveDB(STORAGE_KEY_BORROW, borrowings);
+            borrowings.splice(idx, 1);
+            saveDB(STORAGE_KEY_BORROW, borrowings);
 
-                showModal('Berhasil', 'Buku berhasil dikembalikan. Terima kasih!', 'success', () => {
-                    renderStudentDashboard('return');
-                });
+            showModal('Berhasil', 'Buku berhasil dikembalikan. Terima kasih!', 'success', () => {
+                renderStudentDashboard('return');
             });
         }
 
@@ -1013,6 +1088,14 @@
             container.innerHTML = `
                 <div class="max-w-5xl mx-auto space-y-6">
                     <h3 class="text-xl font-bold text-slate-900">Ringkasan Sistem</h3>
+                    <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Kode Pengembalian Hari Ini</p>
+                        <div class="mt-2 flex flex-wrap items-center gap-4">
+                            <span id="admin-return-code" class="font-mono text-4xl sm:text-5xl font-extrabold tracking-[0.25em] text-indigo-600 select-all">${dailyReturnCode()}</span>
+                            <button onclick="copyReturnCode()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl shadow-sm transition"><i class="fa-solid fa-copy mr-2"></i><span id="copy-code-label">Salin Kode</span></button>
+                        </div>
+                        <p class="mt-3 text-xs text-slate-500">${new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}. Kode berganti otomatis setiap pukul 00.00. Berikan kode ini kepada siswa saat mereka mengembalikan buku; kode tidak ditampilkan di halaman siswa.</p>
+                    </div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
                         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
                             <div class="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-2xl font-bold"><i class="fa-solid fa-users"></i></div>
