@@ -15,7 +15,7 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <script>
-        tailwind.config = {
+        if (window.tailwind) tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
@@ -201,6 +201,50 @@
         aside button[id^="adm-btn-"] span { word-break: break-word; }
         aside button[id^="adm-btn-"] i { font-size: 1.15rem; width: auto !important; }
         @media (min-width: 640px) { aside button[id^="adm-btn-"] i { font-size: 1rem; width: 1.25rem !important; } }
+
+        /* Jika Font Awesome tidak termuat, ikon diganti ikon SVG bawaan (tanpa emoji / kotak []) */
+        html.no-fa i[class*="fa-"] { font-style: normal; font-weight: inherit; font-family: inherit; display: inline-block; vertical-align: -0.125em; }
+        html.no-fa i[class*="fa-"]::before {
+            content: ""; display: inline-block; width: 1em; height: 1em; background-color: currentColor;
+            -webkit-mask: var(--ico, none) center / contain no-repeat; mask: var(--ico, none) center / contain no-repeat;
+            --ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3C/svg%3E");
+        }
+        html.no-fa i.fa-book::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z%22/%3E%3Cpath d=%22M8 17h11%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-book-open::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M3 5c3-1 6-1 9 1 3-2 6-2 9-1v14c-3-1-6-1-9 1-3-2-6-2-9-1z%22/%3E%3Cpath d=%22M12 6v14%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-xmark::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M6 6l12 12M18 6L6 18%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-trash::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13M10 11v6M14 11v6%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-right-from-bracket::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M10 4H5v16h5M15 8l4 4-4 4M19 12H9%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-search::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Ccircle cx=%2210.5%22 cy=%2210.5%22 r=%226%22/%3E%3Cpath d=%22M15 15l5 5%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-plus::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 5v14M5 12h14%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-pen::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 20l1-5L16 4l4 4L9 19z%22/%3E%3Cpath d=%22M14 6l4 4%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-copy::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Crect x=%229%22 y=%229%22 width=%2211%22 height=%2211%22 rx=%222%22/%3E%3Cpath d=%22M5 15V6a2 2 0 0 1 2-2h8%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-list-check::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 6l1.5 1.5L8 5M4 12l1.5 1.5L8 11M4 18l1.5 1.5L8 17M11 6h9M11 12h9M11 18h9%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-whatsapp::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 20l1.3-4.2A8 8 0 1 1 8.2 18.7z%22/%3E%3Cpath d=%22M9 9c0 3 3 6 6 6l1.2-1.4-2-1-1 .6c-1-.4-1.8-1.2-2.2-2.2l.6-1-1-2z%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-file-excel::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M6 3h8l4 4v14H6z%22/%3E%3Cpath d=%22M14 3v4h4M9.5 11.5l5 6M14.5 11.5l-5 6%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-chart-pie::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 3v9h9A9 9 0 1 1 12 3z%22/%3E%3Cpath d=%22M15 3.5A9 9 0 0 1 20.5 9H15z%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-check::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M5 12.5l4.5 4.5L19 7%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-info::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Ccircle cx=%2212%22 cy=%2212%22 r=%229%22/%3E%3Cpath d=%22M12 11v6M12 7.5h.01%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-triangle-exclamation::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 4l9 16H3z%22/%3E%3Cpath d=%22M12 10v4M12 17h.01%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-users::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Ccircle cx=%229%22 cy=%228%22 r=%223.2%22/%3E%3Cpath d=%22M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6%22/%3E%3Ccircle cx=%2217%22 cy=%229%22 r=%222.5%22/%3E%3Cpath d=%22M17 14c2.5 0 4 2 4 5%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-user::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Ccircle cx=%2212%22 cy=%228%22 r=%224%22/%3E%3Cpath d=%22M4 21c0-4.5 3.6-7 8-7s8 2.5 8 7%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-circle-user::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Ccircle cx=%2212%22 cy=%2212%22 r=%229%22/%3E%3Ccircle cx=%2212%22 cy=%2210%22 r=%223%22/%3E%3Cpath d=%22M6.5 18c1-2.5 3-3.5 5.5-3.5s4.5 1 5.5 3.5%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-lock::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Crect x=%225%22 y=%2211%22 width=%2214%22 height=%2210%22 rx=%222%22/%3E%3Cpath d=%22M8 11V8a4 4 0 0 1 8 0v3%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-clock-rotate-left::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 12a8 8 0 1 1 2.5 5.8%22/%3E%3Cpath d=%22M4 6v5h5M12 8v4l3 2%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-rotate-right::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M20 12a8 8 0 1 1-3-6.2M20 4v5h-5%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-rotate-left::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 12a8 8 0 1 0 3-6.2M4 4v5h5%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-rotate::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M20 12a8 8 0 1 1-3-6.2M20 4v5h-5%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-bookmark::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M7 4h10v17l-5-4-5 4z%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-graduation-cap::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M2 9l10-5 10 5-10 5z%22/%3E%3Cpath d=%22M6 11.5V16c3 2.5 9 2.5 12 0v-4.5M22 9v6%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-newspaper::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Crect x=%224%22 y=%224%22 width=%2216%22 height=%2216%22 rx=%222%22/%3E%3Cpath d=%22M8 8h8M8 12h8M8 16h5%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-layer-group::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 3l9 5-9 5-9-5z%22/%3E%3Cpath d=%22M3 12l9 5 9-5M3 16l9 5 9-5%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-boxes-stacked::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 3l8 4.5v9L12 21l-8-4.5v-9z%22/%3E%3Cpath d=%22M4 7.5l8 4.5 8-4.5M12 12v9%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-shield-halved::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z%22/%3E%3Cpath d=%22M12 3v18%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-feather::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M20 4c-8 0-13 5-13 12v4M20 4c0 8-5 12-12 12M9 15l6-6%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-download::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 4v11M7 11l5 5 5-5M5 20h14%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-cloud-arrow-up::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M7 18a5 5 0 0 1-.5-9.9A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9z%22/%3E%3Cpath d=%22M12 17v-6M9 13l3-3 3 3%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-magnifying-glass::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Ccircle cx=%2210.5%22 cy=%2210.5%22 r=%226%22/%3E%3Cpath d=%22M15 15l5 5%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-circle-check::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M5 12.5l4.5 4.5L19 7%22/%3E%3C/svg%3E"); }
+        html.no-fa i.fa-book-atlas::before { --ico: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23000%22 stroke-width=%222.2%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z%22/%3E%3Cpath d=%22M8 17h11%22/%3E%3C/svg%3E"); }
         html, body { height: 100%; }
         @supports (height: 100dvh) { html, body { height: 100dvh; } }
         body {
@@ -222,7 +266,28 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-    </style>
+            /* ikon di dalam kolom isian (latar terang): warna gelap agar terlihat jelas */
+        html body :is(.dash-wrap,.auth-card,.glass-pop) .absolute.inset-y-0,
+        html body :is(.dash-wrap,.auth-card,.glass-pop) .absolute.inset-y-0 * { color: #1e293b !important; text-shadow: none !important; opacity: 1 !important; }
+        html body :is(.dash-wrap,.auth-card,.glass-pop) .absolute.inset-y-0 i { font-size: 1.05rem; }
+
+        /* ===== Tampilan HP: tabel diubah jadi kartu agar tidak terpotong ===== */
+        @media (max-width: 639px) {
+            .overflow-x-auto > table { min-width: 0 !important; display: block; width: 100%; }
+            table thead { display: none; }
+            table tbody { display: block; }
+            table tbody tr { display: block; margin-bottom: 12px; padding: 8px 12px; border: 1px solid rgba(255,255,255,.28) !important; border-radius: 14px; background: rgba(255,255,255,.07); }
+            table tbody td { display: block !important; padding: 6px 0 !important; text-align: left !important; white-space: normal !important; border: 0 !important; word-break: break-word; }
+            table tbody td::before { content: attr(data-label); display: block; margin-bottom: 2px; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #fde68a; }
+            table tbody td[data-label=""]::before { display: none; }
+            table tbody td[colspan] { text-align: center !important; }
+            table tbody td[colspan]::before { display: none !important; }
+            table tbody td > p { margin: 0; }
+            html body .dash-wrap table tbody td.sticky { position: static !important; background: transparent !important; text-align: left !important; }
+            table tbody td.text-right > button, table tbody td.text-right > div { margin-right: 6px; }
+            .overflow-x-auto { overflow-x: visible; }
+        }
+</style>
 </head>
 <body class="bg-slate-50 text-slate-800 h-full flex flex-col antialiased">
 
@@ -274,13 +339,13 @@
 
         // ---------- Helper: penyimpanan aman (iOS private mode / kuota penuh) ----------
         const memStore = {};
-        function lsGet(k) { try { const v = localStorage.getItem(k); return v === null ? (memStore[k] ?? null) : v; } catch (e) { return memStore[k] ?? null; } }
+        function lsGet(k) { try { const v = localStorage.getItem(k); return v === null ? (k in memStore ? memStore[k] : null) : v; } catch (e) { return (k in memStore) ? memStore[k] : null; } }
         function lsSet(k, v) { try { localStorage.setItem(k, v); delete memStore[k]; return true; } catch (e) { memStore[k] = v; return false; } }
         function lsRemove(k) { try { localStorage.removeItem(k); } catch (e) {} delete memStore[k]; }
 
         // ---------- Helper: escape HTML (cegah XSS dari input) ----------
         function esc(v) {
-            return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         }
 
         // ---------- Helper: tanggal lokal (bukan UTC) ----------
@@ -412,7 +477,7 @@
         }
 
         function openImgModal(url) {
-            document.getElementById('preview-img-src').src = url || 'https://placehold.co/300x400/e2e8f0/64748b?text=No+Cover';
+            document.getElementById('preview-img-src').src = url || coverSVG('Tanpa Sampul');
             document.getElementById('img-modal').classList.remove('hidden');
         }
 
@@ -420,11 +485,29 @@
             document.getElementById('img-modal').classList.add('hidden');
         }
 
+
+        // ---------- Sampul buku buatan sendiri (tanpa internet) dipakai jika foto gagal dimuat / kosong ----------
+        function coverSVG(title) {
+            const t = String(title || 'Buku');
+            let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0;
+            const pal = [['#7c2d12', '#c2410c'], ['#14532d', '#16a34a'], ['#1e3a8a', '#3b82f6'], ['#581c87', '#a855f7'], ['#7f1d1d', '#ef4444'], ['#134e4a', '#14b8a6'], ['#713f12', '#eab308'], ['#831843', '#ec4899']];
+            const c = pal[h % pal.length];
+            const x = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const words = t.split(/\s+/), lines = []; let cur = '';
+            words.forEach(w => { if ((cur + ' ' + w).trim().length > 13 && cur) { lines.push(cur); cur = w; } else cur = (cur + ' ' + w).trim(); });
+            if (cur) lines.push(cur);
+            const shown = lines.slice(0, 5);
+            if (lines.length > 5) shown[4] = shown[4].slice(0, 11) + '…';
+            const y0 = 200 - (shown.length - 1) * 22;
+            const text = shown.map((l, i) => `<text x="165" y="${y0 + i * 44}" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="34" fill="#fff">${x(l)}</text>`).join('');
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400" viewBox="0 0 300 400"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c[1]}"/><stop offset="1" stop-color="${c[0]}"/></linearGradient></defs><rect width="300" height="400" rx="14" fill="url(#g)"/><rect width="34" height="400" fill="rgba(0,0,0,.28)"/><rect x="52" y="26" width="226" height="348" rx="8" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="3"/>${text}<path d="M140 340h40v-24l-20 10-20-10z" fill="#fde68a"/></svg>`;
+            return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        }
+        function coverFallback(img) { img.onerror = null; img.src = coverSVG(img.getAttribute('data-t')); }
+
         function getBookCoverHTML(url, title = 'Buku') {
-            if (!url) {
-                return `<div class="w-[50px] h-[70px] bg-slate-100 rounded-lg flex flex-col items-center justify-center text-slate-400 border border-slate-200 shadow-sm shrink-0"><i class="fa-solid fa-book text-lg"></i></div>`;
-            }
-            return `<img src="${url}" alt="${esc(title)}" class="w-[50px] h-[70px] object-cover rounded-lg border border-slate-200 shadow-sm shrink-0 cursor-pointer hover:opacity-90 transition" onclick="openImgModal('${url}')" onerror="this.onerror=null; this.src='https://placehold.co/50x70/e2e8f0/64748b?text=Error';">`;
+            const src = url || coverSVG(title);
+            return `<img src="${esc(src)}" data-t="${esc(title)}" alt="${esc(title)}" class="w-[50px] h-[70px] object-cover rounded-lg border border-slate-200 shadow-sm shrink-0 cursor-pointer hover:opacity-90 transition" onclick="openImgModal(this.src)" onerror="coverFallback(this)">`;
         }
 
         function getCurrentSession() {
@@ -469,14 +552,14 @@
                                 <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">NISN atau Username Admin</label>
                                 <div class="relative">
                                     <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400"><i class="fa-solid fa-user"></i></span>
-                                    <input type="text" id="login-username" required class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition" placeholder="Masukkan NISN atau admin">
+                                    <input type="text" id="login-username" required autocapitalize="none" autocorrect="off" spellcheck="false" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition" placeholder="Masukkan NISN atau admin">
                                 </div>
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Password</label>
                                 <div class="relative">
                                     <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400"><i class="fa-solid fa-lock"></i></span>
-                                    <input type="password" id="login-password" required class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition" placeholder="••••••••">
+                                    <input type="password" id="login-password" required autocapitalize="none" autocorrect="off" spellcheck="false" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition" placeholder="••••••••">
                                 </div>
                             </div>
                             <button type="submit" class="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-200 transition duration-200 text-sm">Masuk Akun</button>
@@ -492,17 +575,22 @@
 
         function handleLogin(e) {
             e.preventDefault();
-            const u = document.getElementById('login-username').value.trim();
-            const p = document.getElementById('login-password').value;
+            try { doLogin(); } catch (err) { alert('Login gagal diproses: ' + (err && err.message ? err.message : err)); }
+        }
 
-            if (u === 'admin' && p === 'admin123') {
+        function doLogin() {
+            const u = document.getElementById('login-username').value.trim();
+            const pRaw = document.getElementById('login-password').value;
+            const p = pRaw.trim();
+
+            if (u.toLowerCase() === 'admin' && p === 'admin123') {
                 setSession({ role: 'admin', name: 'Administrator' });
                 renderAdminDashboard();
                 return;
             }
 
             const users = getDB(STORAGE_KEY_USERS, defaultUsers);
-            const found = users.find(x => x.nisn === u && x.password === p);
+            const found = users.find(x => x.nisn === u && (x.password === pRaw || x.password === p));
             if (found) {
                 setSession({ role: 'student', nisn: found.nisn, name: found.name, kelas: found.kelas });
                 renderStudentDashboard();
@@ -546,6 +634,16 @@
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
+                                    <label for="reg-hp" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">No. HP Siswa</label>
+                                    <input type="tel" id="reg-hp" required inputmode="tel" autocomplete="tel" maxlength="16" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600" placeholder="Contoh: 081234567890">
+                                </div>
+                                <div>
+                                    <label for="reg-hp-ortu" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">No. HP Orang Tua / Wali</label>
+                                    <input type="tel" id="reg-hp-ortu" required inputmode="tel" maxlength="16" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600" placeholder="Contoh: 081298765432">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
                                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Password (Min. 6 Karakter)</label>
                                     <input type="password" id="reg-pass" required minlength="6" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600" placeholder="••••••••">
                                 </div>
@@ -565,14 +663,35 @@
             `;
         }
 
+        // Bersihkan & validasi nomor HP Indonesia (boleh 08xx, +628xx, 628xx)
+        function cleanPhone(v) {
+            const p = String(v || '').replace(/[\s().-]/g, '');
+            return /^(\+62|62|0)8\d{8,12}$/.test(p) ? p : null;
+        }
+        function waLink(p) {
+            const d = String(p).replace(/\D/g, '');
+            return 'https://wa.me/' + (d.startsWith('0') ? '62' + d.slice(1) : d);
+        }
+
         function handleRegister(e) {
             e.preventDefault();
             const nisn = document.getElementById('reg-nisn').value.trim();
             const name = document.getElementById('reg-name').value.trim();
             const kelas = document.getElementById('reg-kelas').value;
             const tglLahir = document.getElementById('reg-dob').value;
+            const noHp = cleanPhone(document.getElementById('reg-hp').value);
+            const noHpOrtu = cleanPhone(document.getElementById('reg-hp-ortu').value);
             const password = document.getElementById('reg-pass').value;
             const passConfirm = document.getElementById('reg-pass-confirm').value;
+
+            if (!noHp) {
+                showModal('Pendaftaran Gagal', 'No. HP siswa tidak valid. Gunakan format seperti 081234567890.', 'error');
+                return;
+            }
+            if (!noHpOrtu) {
+                showModal('Pendaftaran Gagal', 'No. HP orang tua / wali tidak valid. Gunakan format seperti 081298765432.', 'error');
+                return;
+            }
 
             if (password !== passConfirm) {
                 showModal('Pendaftaran Gagal', 'Konfirmasi password tidak cocok dengan password.', 'error');
@@ -585,7 +704,7 @@
                 return;
             }
 
-            users.push({ nisn, name, kelas, tglLahir, password });
+            users.push({ nisn, name, kelas, tglLahir, noHp, noHpOrtu, password });
             saveDB(STORAGE_KEY_USERS, users);
 
             showModal('Pendaftaran Berhasil!', 'Akun Anda berhasil didaftarkan. Silakan login.', 'success', () => {
@@ -613,7 +732,7 @@
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="dash-wrap flex-1 flex flex-col h-full overflow-hidden">
-                    <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm" style="padding-top:max(1rem, env(safe-area-inset-top))">
+                    <header class="bg-white border-b border-slate-200 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2 shadow-sm" style="padding-top:max(1rem, env(safe-area-inset-top))">
                         <div class="flex items-center space-x-3">
                             <div class="lumi-logo lumi-logo-sm" role="img" aria-label="Lumitera"></div>
                             <div>
@@ -623,7 +742,7 @@
                         </div>
                         <div class="flex items-center space-x-4">
                             <div class="text-right hidden sm:block">
-                                <p class="text-sm font-semibold text-slate-800">👋 Halo, ${esc(session.name)}</p>
+                                <p class="text-sm font-semibold text-slate-800"><i class="fa-solid fa-circle-user mr-1.5"></i>Halo, ${esc(session.name)}</p>
                                 <p class="text-xs text-indigo-600 font-medium">Kelas ${esc(session.kelas)}</p>
                             </div>
                             <button onclick="logout()" class="p-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 transition" title="Keluar"><i class="fa-solid fa-right-from-bracket"></i></button>
@@ -657,11 +776,11 @@
                                 </div>
                             </div>
 
-                            <div class="flex border-b border-slate-200 space-x-6 overflow-x-auto">
-                                <button onclick="renderStudentTab('borrow')" id="tab-btn-borrow" class="pb-3 text-sm font-semibold border-b-2 whitespace-nowrap transition ${activeTab === 'borrow' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}"><i class="fa-solid fa-magnifying-glass mr-2"></i> Pinjam Buku</button>
-                                <button onclick="renderStudentTab('return')" id="tab-btn-return" class="pb-3 text-sm font-semibold border-b-2 whitespace-nowrap transition ${activeTab === 'return' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}"><i class="fa-solid fa-rotate-left mr-2"></i> Kembalikan & Perpanjang</button>
-                                <button onclick="renderStudentTab('history')" id="tab-btn-history" class="pb-3 text-sm font-semibold border-b-2 whitespace-nowrap transition ${activeTab === 'history' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}"><i class="fa-solid fa-clock-rotate-left mr-2"></i> Riwayat</button>
-                                <button onclick="renderStudentTab('collection')" id="tab-btn-collection" class="pb-3 text-sm font-semibold border-b-2 whitespace-nowrap transition ${activeTab === 'collection' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}"><i class="fa-solid fa-layer-group mr-2"></i> Koleksi Buku</button>
+                            <div class="grid grid-cols-2 gap-x-2 sm:flex sm:space-x-6 sm:gap-x-0 border-b border-slate-200 sm:overflow-x-auto">
+                                <button onclick="renderStudentTab('borrow')" id="tab-btn-borrow" class="pb-3 pt-1 px-1 text-xs sm:text-sm font-semibold border-b-2 text-center sm:text-left sm:whitespace-nowrap transition ${activeTab === 'borrow' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}"><i class="fa-solid fa-magnifying-glass mr-2"></i> Pinjam Buku</button>
+                                <button onclick="renderStudentTab('return')" id="tab-btn-return" class="pb-3 pt-1 px-1 text-xs sm:text-sm font-semibold border-b-2 text-center sm:text-left sm:whitespace-nowrap transition ${activeTab === 'return' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}"><i class="fa-solid fa-rotate-left mr-1.5"></i> Kembalikan & Perpanjang</button>
+                                <button onclick="renderStudentTab('history')" id="tab-btn-history" class="pb-3 pt-1 px-1 text-xs sm:text-sm font-semibold border-b-2 text-center sm:text-left sm:whitespace-nowrap transition ${activeTab === 'history' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}"><i class="fa-solid fa-clock-rotate-left mr-2"></i> Riwayat</button>
+                                <button onclick="renderStudentTab('collection')" id="tab-btn-collection" class="pb-3 pt-1 px-1 text-xs sm:text-sm font-semibold border-b-2 text-center sm:text-left sm:whitespace-nowrap transition ${activeTab === 'collection' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}"><i class="fa-solid fa-layer-group mr-2"></i> Koleksi Buku</button>
                             </div>
 
                             <div id="tab-content-area" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 min-h-[400px]"></div>
@@ -678,7 +797,7 @@
             ['borrow', 'return', 'history', 'collection'].forEach(t => {
                 const btn = document.getElementById(`tab-btn-${t}`);
                 if (btn) {
-                    btn.className = `pb-3 text-sm font-semibold border-b-2 whitespace-nowrap transition ${t === tab ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`;
+                    btn.className = `pb-3 pt-1 px-1 text-xs sm:text-sm font-semibold border-b-2 text-center sm:text-left sm:whitespace-nowrap transition ${t === tab ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`;
                 }
             });
 
@@ -729,8 +848,8 @@
         }
 
         function filterBorrowBooks() {
-            const search = (document.getElementById('borrow-search')?.value || '').toLowerCase();
-            const cat = document.getElementById('borrow-cat-filter')?.value || '';
+            const search = ((document.getElementById('borrow-search') || {}).value || '').toLowerCase();
+            const cat = (document.getElementById('borrow-cat-filter') || {}).value || '';
             const books = getDB(STORAGE_KEY_BOOKS, defaultBooks);
 
             const filtered = books.filter(b => {
@@ -814,7 +933,7 @@
                 else if (diffDays <= 2) statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700">Hampir Tempo (${diffDays} hari)</span>`;
 
                 const renewBadge = b.renewCount > 0
-                    ? `<span class="ml-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">🔄 Diperpanjang ${b.renewCount}x</span>` : '';
+                    ? `<span class="ml-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100"><i class="fa-solid fa-rotate mr-1"></i>Diperpanjang ${b.renewCount}x</span>` : '';
 
                 return `
                     <div class="p-4 rounded-2xl border border-slate-200 bg-white flex space-x-4 items-start shadow-sm">
@@ -1041,7 +1160,7 @@
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="dash-wrap flex-1 flex flex-col h-full overflow-hidden">
-                    <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm" style="padding-top:max(1rem, env(safe-area-inset-top))">
+                    <header class="bg-white border-b border-slate-200 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2 shadow-sm" style="padding-top:max(1rem, env(safe-area-inset-top))">
                         <div class="flex items-center space-x-3">
                             <div class="lumi-logo lumi-logo-sm" role="img" aria-label="Lumitera"></div>
                             <div>
@@ -1050,13 +1169,13 @@
                             </div>
                         </div>
                         <div class="flex items-center space-x-4">
-                            <span class="text-sm font-semibold text-slate-800">Administrator</span>
+                            <span class="hidden sm:inline text-sm font-semibold text-slate-800">Administrator</span>
                             <button onclick="logout()" class="p-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 transition" title="Keluar"><i class="fa-solid fa-right-from-bracket"></i></button>
                         </div>
                     </header>
 
                     <div class="flex-1 flex flex-row overflow-hidden min-h-0">
-                        <aside class="w-[6.5rem] sm:w-52 md:w-64 bg-white border-r border-slate-200 p-2 md:p-4 flex flex-col gap-2 shrink-0 overflow-y-auto">
+                        <aside class="w-[6rem] sm:w-52 md:w-64 bg-white border-r border-slate-200 p-2 md:p-4 flex flex-col gap-2 shrink-0 overflow-y-auto">
                             <button onclick="renderAdminTab('stats')" id="adm-btn-stats" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-chart-pie w-5"></i><span>Statistik Utama</span></button>
                             <button onclick="renderAdminTab('books')" id="adm-btn-books" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-book w-5"></i><span>Kelola Buku</span></button>
                             <button onclick="renderAdminTab('monitoring')" id="adm-btn-monitoring" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-list-check w-5"></i><span>Monitoring Peminjaman</span></button>
@@ -1096,7 +1215,7 @@
                     <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Kode Pengembalian Hari Ini</p>
                         <div class="mt-2 flex flex-wrap items-center gap-4">
-                            <span id="admin-return-code" class="font-mono text-4xl sm:text-5xl font-extrabold tracking-[0.25em] text-indigo-600 select-all">${dailyReturnCode()}</span>
+                            <span id="admin-return-code" class="font-mono text-3xl sm:text-5xl font-extrabold tracking-[0.12em] sm:tracking-[0.25em] text-indigo-600 select-all break-all">${dailyReturnCode()}</span>
                             <button onclick="copyReturnCode()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl shadow-sm transition"><i class="fa-solid fa-copy mr-2"></i><span id="copy-code-label">Salin Kode</span></button>
                         </div>
                         <p class="mt-3 text-xs text-slate-500">${new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}. Kode berganti otomatis setiap pukul 00.00. Berikan kode ini kepada siswa saat mereka mengembalikan buku; kode tidak ditampilkan di halaman siswa.</p>
@@ -1137,7 +1256,7 @@
                         <div class="flex flex-wrap items-center gap-2">
                             <button onclick="openImportModal()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm rounded-xl shadow-sm transition flex items-center space-x-2">
                                 <i class="fa-solid fa-file-excel"></i>
-                                <span>📥 Import Excel</span>
+                                <span>Import Excel</span>
                             </button>
                             <button onclick="resetDefaultBooks()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm rounded-xl transition flex items-center space-x-2" title="Kembalikan daftar buku bawaan">
                                 <i class="fa-solid fa-rotate-right"></i>
@@ -1233,7 +1352,7 @@
                                     <input type="file" id="fotoInput" accept="image/png, image/jpeg, image/jpg, image/webp" onchange="handleFileSelected(event)" class="hidden">
                                     
                                     <div id="uploadPlaceholder" class="space-y-1">
-                                        <div class="text-4xl mb-1">📤</div>
+                                        <div class="text-4xl mb-1"><i class="fa-solid fa-cloud-arrow-up"></i></div>
                                         <p class="text-sm font-semibold text-slate-800">Drag & drop foto di sini</p>
                                         <p class="text-xs text-slate-500">atau klik untuk pilih file</p>
                                         <p class="text-[11px] text-slate-400 mt-1">PNG, JPG, JPEG, WEBP (otomatis dikompres)</p>
@@ -1243,7 +1362,7 @@
                                         <img id="previewImg" src="" alt="Preview" class="w-[100px] h-[140px] object-cover rounded-xl shadow-md border border-slate-200">
                                         <p id="fileName" class="text-xs font-medium text-slate-700 truncate max-w-[240px]"></p>
                                         <p id="fileSize" class="text-[11px] text-slate-400"></p>
-                                        <button type="button" onclick="event.stopPropagation(); hapusFoto();" class="px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 font-medium text-xs rounded-lg transition">🗑️ Hapus Foto</button>
+                                        <button type="button" onclick="event.stopPropagation(); hapusFoto();" class="px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 font-medium text-xs rounded-lg transition"><i class="fa-solid fa-trash mr-1"></i>Hapus Foto</button>
                                     </div>
                                 </div>
                             </div>
@@ -1268,7 +1387,7 @@
                         <div class="mb-5">
                             <button onclick="downloadTemplate()" class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-sm transition flex items-center justify-center space-x-2 text-sm">
                                 <i class="fa-solid fa-file-excel"></i>
-                                <span>📄 Download Template Excel</span>
+                                <i class="fa-solid fa-download"></i><span>Download Template Excel</span>
                             </button>
                         </div>
 
@@ -1302,7 +1421,7 @@
             XLSX.utils.book_append_sheet(wb, ws, 'Data Buku');
             
             const panduanData = [
-                ['📖 PANDUAN IMPORT BUKU'],
+                ['PANDUAN IMPORT BUKU'],
                 [''],
                 ['1. Isi kolom sesuai header: Judul Buku, Pengarang, Kategori Buku, Stok'],
                 ['2. Kolom "Kategori Buku" boleh dikosongkan (otomatis jadi Buku Pelajaran)'],
@@ -1319,10 +1438,10 @@
             
             const wsPanduan = XLSX.utils.aoa_to_sheet(panduanData);
             wsPanduan['!cols'] = [{ wch: 70 }];
-            XLSX.utils.book_append_sheet(wb, wsPanduan, '📖 Panduan');
+            XLSX.utils.book_append_sheet(wb, wsPanduan, 'Panduan');
             
             XLSX.writeFile(wb, 'template_import_buku.xlsx');
-            showModal('Template Didownload', '✅ Template berhasil didownload!\n\nBuka file "template_import_buku.xlsx" di Excel atau Google Sheets.', 'success');
+            showModal('Template Didownload', 'Template berhasil didownload!\n\nBuka file "template_import_buku.xlsx" di Excel atau Google Sheets.', 'success');
         }
 
         function triggerFileInput() {
@@ -1533,7 +1652,7 @@
                         const title = String(row.title || row.Judul || row['Judul Buku'] || '').trim();
                         const author = String(row.author || row.Penulis || row['Pengarang'] || '').trim();
                         let category = String(row.category || row.Kategori || row['Kategori Buku'] || '').trim();
-                        let stock = parseInt(row.stock ?? row.Stok); if (isNaN(stock) || stock < 0) stock = 5;
+                        let stock = parseInt(row.stock != null ? row.stock : row.Stok); if (isNaN(stock) || stock < 0) stock = 5;
 
                         if (!category) {
                             category = 'Buku Pelajaran';
@@ -1641,6 +1760,11 @@
             `;
         }
 
+        function phoneCellHTML(p) {
+            if (!p) return '<span class="text-slate-400">-</span>';
+            return `<a href="tel:${esc(p)}" class="font-mono font-semibold underline decoration-dotted">${esc(p)}</a> <a href="${waLink(p)}" target="_blank" rel="noopener" title="Chat WhatsApp" class="ml-1 text-emerald-600"><i class="fa-brands fa-whatsapp"></i></a>`;
+        }
+
         function renderAdminStudents(container) {
             const students = getDB(STORAGE_KEY_USERS, defaultUsers);
             container.innerHTML = `
@@ -1658,6 +1782,8 @@
                                         <th class="pb-3 px-3">Nama Lengkap</th>
                                         <th class="pb-3 px-3">Kelas</th>
                                         <th class="pb-3 px-3">Tanggal Lahir</th>
+                                        <th class="pb-3 px-3 whitespace-nowrap">No. HP Siswa</th>
+                                        <th class="pb-3 px-3 whitespace-nowrap">No. HP Ortu / Wali</th>
                                         <th class="pb-3 px-3 text-right">Aksi</th>
                                     </tr>
                                 </thead>
@@ -1668,6 +1794,8 @@
                                             <td class="py-3 px-3 font-semibold text-slate-900">${esc(s.name)}</td>
                                             <td class="py-3 px-3"><span class="px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">${esc(s.kelas)}</span></td>
                                             <td class="py-3 px-3 text-slate-600">${s.tglLahir || '-'}</td>
+                                            <td class="py-3 px-3 whitespace-nowrap">${phoneCellHTML(s.noHp)}</td>
+                                            <td class="py-3 px-3 whitespace-nowrap">${phoneCellHTML(s.noHpOrtu)}</td>
                                             <td class="py-3 px-3 text-right sticky right-0 bg-white">
                                                 <button onclick="deleteStudent('${s.nisn}')" class="p-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 rounded-xl transition" title="Hapus Akun Siswa"><i class="fa-solid fa-trash"></i></button>
                                             </td>
@@ -1692,6 +1820,60 @@
             });
         }
 
+        // Pengiriman form tetap berjalan di pratinjau terbatas (iframe sandbox pada chat/aplikasi lain
+        // yang memblokir submit form): tombol dan tombol Enter ditangani langsung lewat JavaScript.
+        function runFormHandler(form) {
+            if (form.reportValidity && !form.reportValidity()) return;
+            if (typeof form.onsubmit === 'function') form.onsubmit({ preventDefault: function () {}, target: form, currentTarget: form });
+        }
+        document.addEventListener('click', function (e) {
+            var btn = e.target && e.target.closest ? e.target.closest('button[type="submit"]') : null;
+            if (!btn) return;
+            var form = btn.form || btn.closest('form');
+            if (!form || !form.getAttribute('onsubmit')) return;
+            e.preventDefault();
+            runFormHandler(form);
+        }, true);
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter') return;
+            var t = e.target;
+            if (!t || t.tagName !== 'INPUT' || !t.form || !t.form.getAttribute('onsubmit')) return;
+            if (t.type === 'file' || t.type === 'button' || t.type === 'submit') return;
+            e.preventDefault();
+            runFormHandler(t.form);
+        }, true);
+
+        // Deteksi Font Awesome (diblokir di sebagian pratinjau/jaringan)
+        (function () {
+            const mark = () => document.documentElement.classList.add('no-fa');
+            try {
+                if (!document.fonts || !document.fonts.load) return;
+                const t = setTimeout(() => { if (!document.documentElement.dataset.faOk) mark(); }, 5000);
+                document.fonts.load('900 16px "Font Awesome 6 Free"').then(list => {
+                    if (list && list.length && list.every(f => f.status === 'loaded')) { document.documentElement.dataset.faOk = '1'; clearTimeout(t); }
+                    else { clearTimeout(t); mark(); }
+                }).catch(() => { clearTimeout(t); mark(); });
+            } catch (e) { mark(); }
+        })();
+
+
+        // Beri label kolom pada setiap sel tabel (dipakai oleh tampilan kartu di HP)
+        (function () {
+            let queued = false;
+            function labelTables() {
+                queued = false;
+                document.querySelectorAll('table').forEach(t => {
+                    const hs = Array.prototype.map.call(t.querySelectorAll('thead th'), h => h.textContent.trim());
+                    t.querySelectorAll('tbody tr').forEach(tr => {
+                        Array.prototype.forEach.call(tr.children, (td, i) => { if (!td.hasAttribute('data-label')) td.setAttribute('data-label', hs[i] || ''); });
+                    });
+                });
+            }
+            new MutationObserver(() => { if (!queued) { queued = true; requestAnimationFrame(labelTables); } }).observe(document.body, { childList: true, subtree: true });
+            labelTables();
+        })();
+
+        window.__lumiLoaded = true;
         window.onload = function() {
             const session = getCurrentSession();
             if (session) {
@@ -1701,6 +1883,16 @@
                 renderLogin();
             }
         };
+    </script>
+    <script>
+        // Jika skrip utama gagal dimuat (browser/penampil file terlalu lama atau memblokir skrip), tampilkan petunjuk
+        setTimeout(function () {
+            if (window.__lumiLoaded) return;
+            var d = document.createElement('div');
+            d.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:99999;background:#fff3b0;color:#2b1d04;padding:14px;border-radius:14px;font:600 14px sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.4)';
+            d.textContent = 'Aplikasi tidak dapat berjalan di penampil ini. Buka file dengan Chrome (Android) atau Safari (iPhone), atau unggah ke hosting lalu buka lewat link.';
+            document.body.appendChild(d);
+        }, 1500);
     </script>
 </body>
 </html>
