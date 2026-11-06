@@ -287,6 +287,9 @@
             table tbody td.text-right > button, table tbody td.text-right > div { margin-right: 6px; }
             .overflow-x-auto { overflow-x: visible; }
         }
+
+        .lumi-spinner { width: 34px; height: 34px; margin: 0 auto; border-radius: 50%; border: 4px solid rgba(255,255,255,.25); border-top-color: #fde68a; animation: lumispin .8s linear infinite; }
+        @keyframes lumispin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body class="bg-slate-50 text-slate-800 h-full flex flex-col antialiased">
@@ -354,27 +357,65 @@
         function startOfToday() { const t = new Date(); t.setHours(0, 0, 0, 0); return t; }
 
 
-        // ---------- Kode pengembalian harian (berubah otomatis tiap hari, sama di semua perangkat) ----------
-        const RETURN_CODE_SALT = 'lumitera-sman15-bandung-2026';
-        function cyrb53(str, seed = 0) {
-            let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
-            for (let i = 0, ch; i < str.length; i++) {
-                ch = str.charCodeAt(i);
-                h1 = Math.imul(h1 ^ ch, 2654435761);
-                h2 = Math.imul(h2 ^ ch, 1597334677);
+        // ---------- Koneksi Supabase (anon key memang boleh ada di browser; data dilindungi oleh fungsi database) ----------
+        const SUPABASE_URL = 'https://ocrlchbsskscsaxpbhxu.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9jcmxjaGJzc2tzY3NheHBiaHh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM5MTEzMjcsImV4cCI6MjEwOTQ4NzMyN30.4F3E7FIOxH029S3re0ECeDBzwdGRFpYkCK7nYOCzoG4';
+
+        function friendlyError(msg) {
+            msg = String(msg || '');
+            if (/Could not find the function|PGRST202|schema cache/i.test(msg)) return 'Database belum disiapkan. Jalankan file supabase_setup.sql di Supabase SQL Editor.';
+            if (/Invalid API key|JWT|apikey/i.test(msg)) return 'Kunci akses Supabase tidak valid. Periksa SUPABASE_ANON_KEY.';
+            return msg || 'Terjadi kesalahan pada server.';
+        }
+
+        async function api(fn, args) {
+            let res;
+            try {
+                res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + fn, {
+                    method: 'POST',
+                    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(args || {})
+                });
+            } catch (e) {
+                throw new Error('Tidak dapat terhubung ke server. Periksa koneksi internet Anda lalu coba lagi.');
             }
-            h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-            h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-            return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+            const text = await res.text();
+            let data = null;
+            try { data = text ? JSON.parse(text) : null; } catch (e) { data = null; }
+            if (!res.ok) throw new Error(friendlyError(data && (data.message || data.error || data.hint) || ('Server menjawab ' + res.status)));
+            return data;
         }
-        function dailyReturnCode(d = new Date()) {
-            const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-            let n = cyrb53('LUMITERA|' + fmtDate(d) + '|' + RETURN_CODE_SALT), code = '';
-            for (let i = 0; i < 6; i++) { code += alphabet[n % alphabet.length]; n = Math.floor(n / alphabet.length); }
-            return code;
+
+        // Cache data hasil ambil dari server (dipakai oleh fungsi tampilan)
+        const DB = { books: [], loans: [], students: [], returnCode: '' };
+        function tok() { const s = getCurrentSession(); return (s && s.token) || null; }
+
+        async function loadStudentData() {
+            const t = tok();
+            const r = await Promise.all([api('list_books', { p_token: t }), api('my_loans', { p_token: t })]);
+            DB.books = r[0] || []; DB.loans = r[1] || [];
         }
+        async function loadAdminData() {
+            const t = tok();
+            const r = await Promise.all([api('list_books', { p_token: t }), api('admin_students', { p_token: t }), api('admin_loans', { p_token: t }), api('admin_return_code', { p_token: t })]);
+            DB.books = r[0] || []; DB.students = r[1] || []; DB.loans = r[2] || []; DB.returnCode = (r[3] && r[3].code) || '';
+        }
+
+        function loadingHTML(text) { return '<div class="py-16 text-center"><div class="lumi-spinner"></div><p class="mt-3 text-sm font-semibold">' + (text || 'Memuat data...') + '</p></div>'; }
+
+        function handleApiError(err, title) {
+            const msg = err && err.message ? err.message : String(err);
+            if (/Sesi/.test(msg)) {
+                lsRemove(STORAGE_KEY_SESSION);
+                renderLogin();
+                showModal('Sesi Berakhir', 'Silakan login kembali.', 'error');
+                return;
+            }
+            showModal(title || 'Terjadi Kesalahan', msg, 'error');
+        }
+
         function copyReturnCode() {
-            const code = dailyReturnCode();
+            const code = DB.returnCode;
             const done = () => { const b = document.getElementById('copy-code-label'); if (b) { b.innerText = 'Tersalin!'; setTimeout(() => { b.innerText = 'Salin Kode'; }, 1500); } };
             if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(code).then(done, done); }
             else { const t = document.createElement('textarea'); t.value = code; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (e) {} t.remove(); done(); }
@@ -399,38 +440,14 @@
             { code: 'BK010', title: 'Ensiklopedia Sains Junior', author: 'Tim Dorling Kindersley', category: 'Buku Referensi', stock: 5, photo: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&q=80&w=300' }
         ];
 
-        const defaultUsers = [
-            { nisn: '1234567', name: 'Budi Santoso', kelas: 'XI-IPA-1', tglLahir: '2008-05-12', password: 'password123' }
-        ];
-
-        function getDB(key, defaultVal) {
-            const data = lsGet(key);
-            if (!data) {
-                lsSet(key, JSON.stringify(defaultVal));
-                return defaultVal;
-            }
-            try { 
-                const parsed = JSON.parse(data);
-                if (key === STORAGE_KEY_BOOKS && (!Array.isArray(parsed) || parsed.length === 0)) {
-                    lsSet(key, JSON.stringify(defaultVal));
-                    return defaultVal;
-                }
-                return parsed; 
-            } catch(e) { return defaultVal; }
+        // Data diambil dari server lalu disimpan sementara di memori (DB). Fungsi tampilan membaca lewat getDB.
+        function getDB(key) {
+            if (key === STORAGE_KEY_BOOKS) return DB.books;
+            if (key === STORAGE_KEY_USERS) return DB.students;
+            if (key === STORAGE_KEY_BORROW) return DB.loans.filter(l => !l.returned);
+            if (key === STORAGE_KEY_HISTORY) return DB.loans.filter(l => l.returned);
+            return [];
         }
-
-        function saveDB(key, val) {
-            const ok = lsSet(key, JSON.stringify(val));
-            if (!ok) {
-                showModal('Penyimpanan Bermasalah', 'Data tidak dapat disimpan permanen di perangkat ini (penyimpanan penuh atau browser dalam mode privat). Data hanya bertahan selama halaman terbuka.', 'error');
-            }
-            return ok;
-        }
-
-        getDB(STORAGE_KEY_BOOKS, defaultBooks);
-        getDB(STORAGE_KEY_USERS, defaultUsers);
-        getDB(STORAGE_KEY_BORROW, []);
-        getDB(STORAGE_KEY_HISTORY, []);
 
         let modalHideTimer = null;
         function showModal(title, message, type = 'info', callback = null) {
@@ -520,7 +537,9 @@
         }
 
         function logout() {
+            const t = tok();
             lsRemove(STORAGE_KEY_SESSION);
+            if (t) { api('logout', { p_token: t }).catch(() => {}); }
             renderLogin();
         }
 
@@ -575,27 +594,30 @@
 
         function handleLogin(e) {
             e.preventDefault();
-            try { doLogin(); } catch (err) { alert('Login gagal diproses: ' + (err && err.message ? err.message : err)); }
+            doLogin().catch(err => showModal('Login Gagal', err && err.message ? err.message : String(err), 'error'));
         }
 
-        function doLogin() {
+        let loginBusy = false;
+        async function doLogin() {
+            if (loginBusy) return;
             const u = document.getElementById('login-username').value.trim();
             const pRaw = document.getElementById('login-password').value;
             const p = pRaw.trim();
-
-            if (u.toLowerCase() === 'admin' && p === 'admin123') {
-                setSession({ role: 'admin', name: 'Administrator' });
-                renderAdminDashboard();
-                return;
-            }
-
-            const users = getDB(STORAGE_KEY_USERS, defaultUsers);
-            const found = users.find(x => x.nisn === u && (x.password === pRaw || x.password === p));
-            if (found) {
-                setSession({ role: 'student', nisn: found.nisn, name: found.name, kelas: found.kelas });
-                renderStudentDashboard();
-            } else {
-                showModal('Login Gagal', 'NISN atau Password salah. Periksa kembali data Anda.', 'error');
+            const isAdmin = u.toLowerCase() === 'admin';
+            const btn = document.querySelector('#login-form button[type="submit"]');
+            loginBusy = true;
+            if (btn) { btn.disabled = true; btn.dataset.t = btn.innerText; btn.innerText = 'Memproses...'; }
+            try {
+                const call = pw => isAdmin ? api('login_admin', { p_username: u, p_password: pw }) : api('login_student', { p_nisn: u, p_password: pw });
+                let r = await call(pRaw);
+                if (!r.ok && p !== pRaw) r = await call(p);
+                if (!r.ok) { showModal('Login Gagal', r.error || 'Login gagal.', 'error'); return; }
+                setSession({ role: r.role, token: r.token, nisn: r.nisn || '', name: r.name, kelas: r.kelas || '' });
+                if (r.role === 'admin') renderAdminDashboard(); else renderStudentDashboard();
+            } finally {
+                loginBusy = false;
+                const b2 = document.querySelector('#login-form button[type="submit"]');
+                if (b2) { b2.disabled = false; if (b2.dataset.t) b2.innerText = b2.dataset.t; }
             }
         }
 
@@ -698,26 +720,22 @@
                 return;
             }
 
-            const users = getDB(STORAGE_KEY_USERS, defaultUsers);
-            if (users.some(u => u.nisn === nisn)) {
-                showModal('Pendaftaran Gagal', 'NISN tersebut sudah terdaftar dalam sistem.', 'error');
-                return;
-            }
-
-            users.push({ nisn, name, kelas, tglLahir, noHp, noHpOrtu, password });
-            saveDB(STORAGE_KEY_USERS, users);
-
-            showModal('Pendaftaran Berhasil!', 'Akun Anda berhasil didaftarkan. Silakan login.', 'success', () => {
-                renderLogin();
-            });
+            api('register_student', { p_nisn: nisn, p_name: name, p_kelas: kelas, p_tgl_lahir: tglLahir || null, p_no_hp: noHp, p_no_hp_ortu: noHpOrtu, p_password: password })
+                .then(() => {
+                    showModal('Pendaftaran Berhasil!', 'Akun Anda berhasil didaftarkan. Silakan login.', 'success', () => { renderLogin(); });
+                })
+                .catch(err => showModal('Pendaftaran Gagal', err.message, 'error'));
         }
 
-        function renderStudentDashboard(activeTab = 'borrow') {
+        async function renderStudentDashboard(activeTab = 'borrow') {
             const session = getCurrentSession();
             if (!session || session.role !== 'student') { renderLogin(); return; }
+            document.getElementById('view-container').innerHTML = '<div class="flex-1 flex items-center justify-center">' + loadingHTML('Memuat data...') + '</div>';
+            try { await loadStudentData(); } catch (err) { handleApiError(err); return; }
+            if (!getCurrentSession()) return;
 
-            const borrowings = getDB(STORAGE_KEY_BORROW, []).filter(b => b.nisn === session.nisn && !b.returned);
-            const books = getDB(STORAGE_KEY_BOOKS, defaultBooks);
+            const borrowings = getDB(STORAGE_KEY_BORROW).filter(b => b.nisn === session.nisn && !b.returned);
+            const books = getDB(STORAGE_KEY_BOOKS);
             const totalJudulBuku = books.length;
 
             const today = new Date();
@@ -792,7 +810,7 @@
         }
 
         let currentStudentTab = 'borrow';
-        function renderStudentTab(tab) {
+        async function renderStudentTab(tab) {
             currentStudentTab = tab;
             ['borrow', 'return', 'history', 'collection'].forEach(t => {
                 const btn = document.getElementById(`tab-btn-${t}`);
@@ -802,6 +820,10 @@
             });
 
             const area = document.getElementById('tab-content-area');
+            if (!area) return;
+            area.innerHTML = loadingHTML();
+            try { await loadStudentData(); } catch (err) { handleApiError(err); return; }
+            if (currentStudentTab !== tab) return;
             if (tab === 'borrow') renderTabBorrow(area);
             else if (tab === 'return') renderTabReturn(area);
             else if (tab === 'history') renderTabHistory(area);
@@ -850,7 +872,7 @@
         function filterBorrowBooks() {
             const search = ((document.getElementById('borrow-search') || {}).value || '').toLowerCase();
             const cat = (document.getElementById('borrow-cat-filter') || {}).value || '';
-            const books = getDB(STORAGE_KEY_BOOKS, defaultBooks);
+            const books = getDB(STORAGE_KEY_BOOKS);
 
             const filtered = books.filter(b => {
                 const matchSearch = b.title.toLowerCase().includes(search) || b.author.toLowerCase().includes(search) || b.code.toLowerCase().includes(search);
@@ -865,57 +887,24 @@
                 : filtered.map(bookCardHTML).join('');
         }
 
-        function borrowBook(code) {
-            const session = getCurrentSession();
-            const books = getDB(STORAGE_KEY_BOOKS, defaultBooks);
-            const bookIdx = books.findIndex(b => b.code === code);
-            if (bookIdx === -1 || books[bookIdx].stock <= 0) {
-                showModal('Gagal Pinjam', 'Buku tidak tersedia atau stok habis.', 'error');
-                return;
-            }
-
-            const borrowings = getDB(STORAGE_KEY_BORROW, []);
-            const activeUserBorrows = borrowings.filter(b => b.nisn === session.nisn && !b.returned);
-            if (activeUserBorrows.length >= 3) {
-                showModal('Batas Peminjaman', 'Anda sudah meminjam 3 buku aktif. Harap kembalikan salah satu terlebih dahulu.', 'error');
-                return;
-            }
-
-            if (activeUserBorrows.some(b => b.codeBuku === code)) {
-                showModal('Sudah Dipinjam', 'Anda sedang meminjam buku ini. Kembalikan dulu sebelum meminjam lagi.', 'error');
-                return;
-            }
-
-            const now = new Date();
-            const dueDate = new Date();
-            dueDate.setDate(now.getDate() + 7);
-
-            books[bookIdx].stock -= 1;
-            saveDB(STORAGE_KEY_BOOKS, books);
-
-            borrowings.push({
-                id: 'BOR-' + Date.now(),
-                nisn: session.nisn,
-                studentName: session.name,
-                codeBuku: books[bookIdx].code,
-                judulBuku: books[bookIdx].title,
-                author: books[bookIdx].author,
-                photo: books[bookIdx].photo || '',
-                tglPinjam: fmtDate(now),
-                dueDate: fmtDate(dueDate),
-                renewCount: 0,
-                returned: false
-            });
-            saveDB(STORAGE_KEY_BORROW, borrowings);
-
-            showModal('Peminjaman Berhasil', `Buku "${books[bookIdx].title}" berhasil dipinjam. Batas pengembalian: ${fmtDate(dueDate)}`, 'success', () => {
-                renderStudentDashboard(currentStudentTab);
-            });
+        let borrowBusy = false;
+        async function borrowBook(code) {
+            if (borrowBusy) return;
+            borrowBusy = true;
+            try {
+                const r = await api('borrow_book', { p_token: tok(), p_code: code });
+                showModal('Peminjaman Berhasil', `Buku "${r.title}" berhasil dipinjam. Batas pengembalian: ${r.dueDate}`, 'success', () => {
+                    renderStudentDashboard(currentStudentTab);
+                });
+            } catch (err) {
+                if (/Sesi/.test(err.message)) handleApiError(err);
+                else showModal('Gagal Pinjam', err.message, 'error');
+            } finally { borrowBusy = false; }
         }
 
         function renderTabReturn(container) {
             const session = getCurrentSession();
-            const borrowings = getDB(STORAGE_KEY_BORROW, []).filter(b => b.nisn === session.nisn && !b.returned);
+            const borrowings = getDB(STORAGE_KEY_BORROW).filter(b => b.nisn === session.nisn && !b.returned);
             const today = startOfToday();
 
             if (borrowings.length === 0) {
@@ -955,9 +944,9 @@
             }).join('') + `</div>`;
         }
 
-        let pendingReturnId = null, returnFails = 0, returnLockUntil = 0;
+        let pendingReturnId = null, returnBusy = false;
         function returnBook(borrowId) {
-            const item = getDB(STORAGE_KEY_BORROW, []).find(b => b.id === borrowId);
+            const item = getDB(STORAGE_KEY_BORROW).find(b => b.id === borrowId);
             if (!item) return;
             pendingReturnId = borrowId;
             document.getElementById('return-modal-book').innerText = '"' + item.judulBuku + '"';
@@ -970,59 +959,27 @@
             document.getElementById('return-modal').classList.add('hidden');
             pendingReturnId = null;
         }
-        function submitReturnCode() {
+        async function submitReturnCode() {
+            if (returnBusy) return;
             const err = document.getElementById('return-code-error');
             const input = document.getElementById('return-code-input');
-            const now = Date.now();
-            if (now < returnLockUntil) {
-                err.innerText = 'Terlalu banyak percobaan. Coba lagi dalam ' + Math.ceil((returnLockUntil - now) / 1000) + ' detik.';
-                return;
-            }
             const entered = input.value.trim().toUpperCase();
             if (!entered) { err.innerText = 'Kode wajib diisi.'; return; }
-            if (entered !== dailyReturnCode()) {
-                returnFails++;
-                if (returnFails >= 5) { returnLockUntil = now + 30000; returnFails = 0; err.innerText = 'Kode salah 5 kali. Coba lagi dalam 30 detik.'; }
-                else err.innerText = 'Kode salah. Minta kode hari ini kepada admin perpustakaan.';
-                input.select();
-                return;
-            }
-            returnFails = 0;
-            const id = pendingReturnId;
-            closeReturnModal();
-            performReturn(id);
-        }
-        function performReturn(borrowId) {
-            const borrowings = getDB(STORAGE_KEY_BORROW, []);
-            const idx = borrowings.findIndex(b => b.id === borrowId);
-            if (idx === -1) return;
-
-            const item = borrowings[idx];
-            item.returned = true;
-            item.returnedDate = fmtDate(new Date());
-
-            const books = getDB(STORAGE_KEY_BOOKS, defaultBooks);
-            const book = books.find(b => b.code === item.codeBuku);
-            if (book) {
-                book.stock += 1;
-                saveDB(STORAGE_KEY_BOOKS, books);
-            }
-
-            const history = getDB(STORAGE_KEY_HISTORY, []);
-            history.unshift({ ...item, status: 'Dikembalikan' });
-            saveDB(STORAGE_KEY_HISTORY, history);
-
-            borrowings.splice(idx, 1);
-            saveDB(STORAGE_KEY_BORROW, borrowings);
-
-            showModal('Berhasil', 'Buku berhasil dikembalikan. Terima kasih!', 'success', () => {
-                renderStudentDashboard('return');
-            });
+            returnBusy = true;
+            err.innerText = '';
+            try {
+                const r = await api('return_book', { p_token: tok(), p_id: pendingReturnId, p_code: entered });
+                if (!r.ok) { err.innerText = r.error || 'Kode salah.'; input.select(); return; }
+                closeReturnModal();
+                showModal('Berhasil', 'Buku berhasil dikembalikan. Terima kasih!', 'success', () => { renderStudentDashboard('return'); });
+            } catch (e) {
+                if (/Sesi/.test(e.message)) { closeReturnModal(); handleApiError(e); }
+                else err.innerText = e.message;
+            } finally { returnBusy = false; }
         }
 
         function renewBook(borrowId) {
-            const borrowings = getDB(STORAGE_KEY_BORROW, []);
-            const item = borrowings.find(b => b.id === borrowId);
+            const item = getDB(STORAGE_KEY_BORROW).find(b => b.id === borrowId);
             if (!item) return;
 
             if (item.renewCount >= 2) {
@@ -1039,22 +996,19 @@
                 return;
             }
 
-            showModal('Konfirmasi Perpanjangan', 'Perpanjangan akan menambah 7 hari dari tanggal jatuh tempo saat ini. Lanjutkan?', 'info', () => {
-                const newDue = parseDate(item.dueDate);
-                newDue.setDate(newDue.getDate() + 7);
-                item.dueDate = fmtDate(newDue);
-                item.renewCount = (item.renewCount || 0) + 1;
-
-                saveDB(STORAGE_KEY_BORROW, borrowings);
-                showModal('Berhasil Diperpanjang', `Masa pinjam diperpanjang hingga ${item.dueDate} (Perpanjangan ke-${item.renewCount})`, 'success', () => {
-                    renderStudentDashboard('return');
-                });
+            showModal('Konfirmasi Perpanjangan', 'Perpanjangan akan menambah 7 hari dari tanggal jatuh tempo saat ini. Lanjutkan?', 'info', async () => {
+                try {
+                    const r = await api('renew_book', { p_token: tok(), p_id: borrowId });
+                    showModal('Berhasil Diperpanjang', `Masa pinjam diperpanjang hingga ${r.dueDate} (Perpanjangan ke-${r.renewCount})`, 'success', () => {
+                        renderStudentDashboard('return');
+                    });
+                } catch (e) { handleApiError(e, 'Tidak Dapat Diperpanjang'); }
             });
         }
 
         function renderTabHistory(container) {
             const session = getCurrentSession();
-            const history = getDB(STORAGE_KEY_HISTORY, []).filter(h => h.nisn === session.nisn);
+            const history = getDB(STORAGE_KEY_HISTORY).filter(h => h.nisn === session.nisn);
 
             if (history.length === 0) {
                 container.innerHTML = `<div class="py-16 text-center text-slate-400"><i class="fa-solid fa-clock-rotate-left text-4xl mb-3"></i><p class="text-base font-semibold">Belum ada riwayat peminjaman.</p></div>`;
@@ -1129,7 +1083,7 @@
         function selectCategory(cat) {
             currentCollectionCat = cat;
             document.getElementById('collection-header-title').innerText = cat ? `Kategori: ${cat}` : 'Semua Koleksi Buku';
-            const books = getDB(STORAGE_KEY_BOOKS, defaultBooks);
+            const books = getDB(STORAGE_KEY_BOOKS);
             const filtered = cat ? books.filter(b => b.category === cat) : books;
 
             const grid = document.getElementById('collection-book-grid');
@@ -1157,6 +1111,8 @@
         }
 
         function renderAdminDashboard(activeTab = 'stats') {
+            const session = getCurrentSession();
+            if (!session || session.role !== 'admin') { renderLogin(); return; }
             const container = document.getElementById('view-container');
             container.innerHTML = `
                 <div class="dash-wrap flex-1 flex flex-col h-full overflow-hidden">
@@ -1189,7 +1145,8 @@
             renderAdminTab(activeTab);
         }
 
-        function renderAdminTab(tab) {
+        let currentAdminTab = 'stats';
+        async function renderAdminTab(tab) {
             ['stats', 'books', 'monitoring', 'students'].forEach(t => {
                 const btn = document.getElementById(`adm-btn-${t}`);
                 if (btn) {
@@ -1198,6 +1155,11 @@
             });
 
             const pane = document.getElementById('admin-main-pane');
+            if (!pane) return;
+            pane.innerHTML = loadingHTML();
+            currentAdminTab = tab;
+            try { await loadAdminData(); } catch (err) { handleApiError(err); return; }
+            if (currentAdminTab !== tab) return;
             if (tab === 'stats') renderAdminStats(pane);
             else if (tab === 'books') renderAdminBooks(pane);
             else if (tab === 'monitoring') renderAdminMonitoring(pane);
@@ -1205,9 +1167,9 @@
         }
 
         function renderAdminStats(container) {
-            const students = getDB(STORAGE_KEY_USERS, defaultUsers);
-            const books = getDB(STORAGE_KEY_BOOKS, defaultBooks);
-            const borrowings = getDB(STORAGE_KEY_BORROW, []).filter(b => !b.returned);
+            const students = getDB(STORAGE_KEY_USERS);
+            const books = getDB(STORAGE_KEY_BOOKS);
+            const borrowings = getDB(STORAGE_KEY_BORROW).filter(b => !b.returned);
 
             container.innerHTML = `
                 <div class="max-w-5xl mx-auto space-y-6">
@@ -1215,7 +1177,7 @@
                     <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Kode Pengembalian Hari Ini</p>
                         <div class="mt-2 flex flex-wrap items-center gap-4">
-                            <span id="admin-return-code" class="font-mono text-3xl sm:text-5xl font-extrabold tracking-[0.12em] sm:tracking-[0.25em] text-indigo-600 select-all break-all">${dailyReturnCode()}</span>
+                            <span id="admin-return-code" class="font-mono text-3xl sm:text-5xl font-extrabold tracking-[0.12em] sm:tracking-[0.25em] text-indigo-600 select-all break-all">${esc(DB.returnCode)}</span>
                             <button onclick="copyReturnCode()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl shadow-sm transition"><i class="fa-solid fa-copy mr-2"></i><span id="copy-code-label">Salin Kode</span></button>
                         </div>
                         <p class="mt-3 text-xs text-slate-500">${new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}. Kode berganti otomatis setiap pukul 00.00. Berikan kode ini kepada siswa saat mereka mengembalikan buku; kode tidak ditampilkan di halaman siswa.</p>
@@ -1248,7 +1210,7 @@
         }
 
         function renderAdminBooks(container) {
-            const books = getDB(STORAGE_KEY_BOOKS, defaultBooks);
+            const books = getDB(STORAGE_KEY_BOOKS);
             container.innerHTML = `
                 <div class="max-w-6xl mx-auto space-y-6">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -1530,7 +1492,7 @@
 
             if (code) {
                 document.getElementById('book-modal-title').innerText = 'Edit Buku';
-                const books = getDB(STORAGE_KEY_BOOKS, defaultBooks);
+                const books = getDB(STORAGE_KEY_BOOKS);
                 const b = books.find(x => x.code === code);
                 if (b) {
                     document.getElementById('book-edit-code').value = b.code;
@@ -1571,47 +1533,35 @@
             const category = document.getElementById('book-category').value;
             const stock = parseInt(document.getElementById('book-stock').value) || 0;
 
-            const books = getDB(STORAGE_KEY_BOOKS, defaultBooks);
-
-            if (!editCode && books.some(b => b.code === code)) {
+            const photoUrl = uploadedBase64Photo || '';
+            if (!editCode && getDB(STORAGE_KEY_BOOKS).some(b => b.code === code)) {
                 showModal('Gagal', 'Kode buku sudah terdaftar dalam sistem.', 'error');
                 return;
             }
 
-            const photoUrl = uploadedBase64Photo || '';
-
-            if (editCode) {
-                const idx = books.findIndex(b => b.code === editCode);
-                if (idx !== -1) {
-                    books[idx] = { ...books[idx], title, author, category, stock, photo: photoUrl };
-                }
-            } else {
-                books.push({ code, title, author, category, stock, photo: photoUrl });
-            }
-
-            saveDB(STORAGE_KEY_BOOKS, books);
-            closeBookModal();
-            showModal('Berhasil', 'Data buku berhasil disimpan.', 'success', () => {
-                renderAdminTab('books');
-            });
+            api('admin_save_book', { p_token: tok(), p_code: editCode || code, p_title: title, p_author: author, p_category: category, p_stock: stock, p_photo: photoUrl, p_is_edit: !!editCode })
+                .then(() => {
+                    closeBookModal();
+                    showModal('Berhasil', 'Data buku berhasil disimpan.', 'success', () => { renderAdminTab('books'); });
+                })
+                .catch(err => handleApiError(err, 'Gagal Menyimpan'));
         }
 
         function deleteBook(code) {
-            showModal('Konfirmasi Hapus', 'Apakah Anda yakin ingin menghapus buku ini dari katalog?', 'info', () => {
-                let books = getDB(STORAGE_KEY_BOOKS, defaultBooks);
-                books = books.filter(b => b.code !== code);
-                saveDB(STORAGE_KEY_BOOKS, books);
-                showModal('Terhapus', 'Buku berhasil dihapus dari katalog.', 'success', () => {
-                    renderAdminTab('books');
-                });
+            showModal('Konfirmasi Hapus', 'Apakah Anda yakin ingin menghapus buku ini dari katalog?', 'info', async () => {
+                try {
+                    await api('admin_delete_book', { p_token: tok(), p_code: code });
+                    showModal('Terhapus', 'Buku berhasil dihapus dari katalog.', 'success', () => { renderAdminTab('books'); });
+                } catch (err) { handleApiError(err); }
             });
         }
 
         function resetDefaultBooks() {
-            showModal('Reset Katalog', 'Kembalikan daftar buku ke default?', 'info', () => {
-                saveDB(STORAGE_KEY_BOOKS, defaultBooks);
-                renderAdminTab('books');
-                showModal('Berhasil', 'Katalog buku telah direset.', 'success');
+            showModal('Reset Katalog', 'Semua buku saat ini akan dihapus dan diganti dengan 10 buku contoh. Lanjutkan?', 'info', async () => {
+                try {
+                    await api('admin_bulk_books', { p_token: tok(), p_books: defaultBooks, p_replace: true });
+                    showModal('Berhasil', 'Katalog buku telah direset.', 'success', () => { renderAdminTab('books'); });
+                } catch (err) { handleApiError(err); }
             });
         }
 
@@ -1645,7 +1595,8 @@
                         return;
                     }
 
-                    const books = getDB(STORAGE_KEY_BOOKS, defaultBooks);
+                    const books = getDB(STORAGE_KEY_BOOKS).slice();
+                    const newBooks = [];
                     let count = 0;
 
                     json.forEach(row => {
@@ -1667,16 +1618,18 @@
 
                         if (title) {
                             let n = books.length + 1; let code; do { code = 'BK' + String(n++).padStart(3, '0'); } while (books.some(x => x.code === code));
-                            books.push({ code, title, author, category, stock, photo: '' });
+                            const nb = { code, title, author, category, stock, photo: '' };
+                            books.push(nb); newBooks.push(nb);
                             count++;
                         }
                     });
 
-                    saveDB(STORAGE_KEY_BOOKS, books);
-                    closeImportModal();
-                    showModal('Import Berhasil', `Berhasil mengimpor ${count} buku ke dalam sistem.`, 'success', () => {
-                        renderAdminTab('books');
-                    });
+                    api('admin_bulk_books', { p_token: tok(), p_books: newBooks, p_replace: false })
+                        .then(r => {
+                            closeImportModal();
+                            showModal('Import Berhasil', `Berhasil mengimpor ${r.count} buku ke dalam sistem.`, 'success', () => { renderAdminTab('books'); });
+                        })
+                        .catch(err => handleApiError(err, 'Import Gagal'));
                 } catch(err) {
                     showModal('Error', 'Gagal memproses file Excel: ' + err.message, 'error');
                 }
@@ -1685,8 +1638,8 @@
         }
 
         function renderAdminMonitoring(container) {
-            const borrowings = getDB(STORAGE_KEY_BORROW, []).filter(b => !b.returned);
-            const history = getDB(STORAGE_KEY_HISTORY, []);
+            const borrowings = getDB(STORAGE_KEY_BORROW).filter(b => !b.returned);
+            const history = getDB(STORAGE_KEY_HISTORY);
             const today = new Date();
             today.setHours(0,0,0,0);
 
@@ -1766,7 +1719,7 @@
         }
 
         function renderAdminStudents(container) {
-            const students = getDB(STORAGE_KEY_USERS, defaultUsers);
+            const students = getDB(STORAGE_KEY_USERS);
             container.innerHTML = `
                 <div class="max-w-6xl mx-auto space-y-6">
                     <div class="flex justify-between items-center">
@@ -1810,13 +1763,11 @@
         }
 
         function deleteStudent(nisn) {
-            showModal('Konfirmasi Hapus Akun', `Hapus siswa dengan NISN ${nisn}?`, 'info', () => {
-                let students = getDB(STORAGE_KEY_USERS, defaultUsers);
-                students = students.filter(s => s.nisn !== nisn);
-                saveDB(STORAGE_KEY_USERS, students);
-                showModal('Berhasil', 'Akun siswa berhasil dihapus.', 'success', () => {
-                    renderAdminTab('students');
-                });
+            showModal('Konfirmasi Hapus Akun', `Hapus siswa dengan NISN ${nisn}? Riwayat peminjamannya juga ikut terhapus.`, 'info', async () => {
+                try {
+                    await api('admin_delete_student', { p_token: tok(), p_nisn: nisn });
+                    showModal('Berhasil', 'Akun siswa berhasil dihapus.', 'success', () => { renderAdminTab('students'); });
+                } catch (err) { handleApiError(err); }
             });
         }
 
@@ -1875,7 +1826,8 @@
 
         window.__lumiLoaded = true;
         window.onload = function() {
-            const session = getCurrentSession();
+            let session = getCurrentSession();
+            if (session && !session.token) { lsRemove(STORAGE_KEY_SESSION); session = null; }
             if (session) {
                 if (session.role === 'admin') renderAdminDashboard();
                 else renderStudentDashboard();
