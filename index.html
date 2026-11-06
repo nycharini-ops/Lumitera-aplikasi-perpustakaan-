@@ -1136,6 +1136,7 @@
                             <button onclick="renderAdminTab('books')" id="adm-btn-books" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-book w-5"></i><span>Kelola Buku</span></button>
                             <button onclick="renderAdminTab('monitoring')" id="adm-btn-monitoring" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-list-check w-5"></i><span>Monitoring Peminjaman</span></button>
                             <button onclick="renderAdminTab('students')" id="adm-btn-students" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-users w-5"></i><span>Kelola Siswa</span></button>
+                            <button onclick="renderAdminTab('settings')" id="adm-btn-settings" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-gear w-5"></i><span>Pengaturan</span></button>
                         </aside>
 
                         <main id="admin-main-pane" class="flex-1 min-w-0 overflow-y-auto p-3 sm:p-6 custom-scrollbar"></main>
@@ -1147,7 +1148,7 @@
 
         let currentAdminTab = 'stats';
         async function renderAdminTab(tab) {
-            ['stats', 'books', 'monitoring', 'students'].forEach(t => {
+            ['stats', 'books', 'monitoring', 'students', 'settings'].forEach(t => {
                 const btn = document.getElementById(`adm-btn-${t}`);
                 if (btn) {
                     btn.className = `w-full shrink-0 text-center sm:text-left px-1.5 sm:px-4 py-3 rounded-xl font-medium text-[11px] leading-tight sm:text-sm flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1.5 sm:gap-0 sm:space-x-3 transition ${t === tab ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'}`;
@@ -1164,6 +1165,7 @@
             else if (tab === 'books') renderAdminBooks(pane);
             else if (tab === 'monitoring') renderAdminMonitoring(pane);
             else if (tab === 'students') renderAdminStudents(pane);
+            else if (tab === 'settings') renderAdminSettings(pane);
         }
 
         function renderAdminStats(container) {
@@ -1767,6 +1769,127 @@
                 try {
                     await api('admin_delete_student', { p_token: tok(), p_nisn: nisn });
                     showModal('Berhasil', 'Akun siswa berhasil dihapus.', 'success', () => { renderAdminTab('students'); });
+                } catch (err) { handleApiError(err); }
+            });
+        }
+
+        // ---------- Pengaturan: password admin & password siswa ----------
+        const SET_INPUT_CLS = 'w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600';
+
+        function genPassword() {
+            const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
+            const buf = new Uint32Array(8);
+            (window.crypto || window.msCrypto).getRandomValues(buf);
+            let out = '';
+            for (let i = 0; i < buf.length; i++) out += chars[buf[i] % chars.length];
+            return out;
+        }
+
+        function renderAdminSettings(container) {
+            const students = getDB(STORAGE_KEY_USERS);
+            container.innerHTML = `
+                <div class="max-w-4xl mx-auto space-y-6">
+                    <h3 class="text-xl font-bold text-slate-900">Pengaturan Pengguna</h3>
+
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                        <h4 class="text-base font-bold text-slate-900 mb-1"><i class="fa-solid fa-user-shield mr-2"></i>Ubah Password Admin</h4>
+                        <p class="text-xs text-slate-500 mb-4">Masukkan password saat ini, lalu password baru (minimal 6 karakter).</p>
+                        <form id="admin-pw-form" onsubmit="submitAdminPassword(event)" class="space-y-3 max-w-md">
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Password Saat Ini</label>
+                                <input type="password" id="adm-pw-old" autocomplete="current-password" required class="${SET_INPUT_CLS}" placeholder="••••••••">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Password Baru</label>
+                                <input type="password" id="adm-pw-new" autocomplete="new-password" required minlength="6" class="${SET_INPUT_CLS}" placeholder="Minimal 6 karakter">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Konfirmasi Password Baru</label>
+                                <input type="password" id="adm-pw-confirm" autocomplete="new-password" required minlength="6" class="${SET_INPUT_CLS}" placeholder="Ulangi password baru">
+                            </div>
+                            <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm shadow-sm shadow-indigo-200 transition">Simpan Password Admin</button>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                        <h4 class="text-base font-bold text-slate-900 mb-1"><i class="fa-solid fa-key mr-2"></i>Password Siswa</h4>
+                        <p class="text-xs text-slate-500 mb-4">Atur ulang password siswa yang lupa. Ketik password baru di baris siswa, lalu tekan Simpan. Tombol kunci membuat password acak.</p>
+                        <input type="text" id="settings-search" oninput="filterSettingsStudents(this.value)" class="${SET_INPUT_CLS} mb-4" placeholder="Cari NISN, nama, atau kelas...">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                                        <th class="pb-3 px-3">NISN</th>
+                                        <th class="pb-3 px-3">Nama</th>
+                                        <th class="pb-3 px-3">Kelas</th>
+                                        <th class="pb-3 px-3">Password Baru</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="settings-student-rows" class="divide-y divide-slate-100 text-sm">
+                                    ${students.length ? students.map((st, i) => `
+                                        <tr data-q="${esc((String(st.nisn) + ' ' + st.name + ' ' + st.kelas).toLowerCase())}">
+                                            <td class="py-3 px-3 font-mono font-bold text-slate-800">${esc(st.nisn)}</td>
+                                            <td class="py-3 px-3 font-semibold text-slate-900">${esc(st.name)}</td>
+                                            <td class="py-3 px-3 whitespace-nowrap">${esc(st.kelas)}</td>
+                                            <td class="py-3 px-3">
+                                                <div class="flex items-center gap-2 min-w-[15rem]">
+                                                    <input type="text" id="stu-pw-${i}" autocomplete="off" class="${SET_INPUT_CLS}" placeholder="Password baru">
+                                                    <button type="button" onclick="document.getElementById('stu-pw-${i}').value = genPassword()" class="p-2.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 rounded-xl transition shrink-0" title="Buat password acak"><i class="fa-solid fa-dice"></i></button>
+                                                    <button type="button" onclick="saveStudentPassword(${i})" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm transition shrink-0">Simpan</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `).join('') : '<tr><td colspan="4" class="py-6 text-center text-slate-500">Belum ada siswa terdaftar.</td></tr>'}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function filterSettingsStudents(q) {
+            q = (q || '').toLowerCase().trim();
+            document.querySelectorAll('#settings-student-rows tr[data-q]').forEach(tr => {
+                tr.classList.toggle('hidden', !!q && tr.dataset.q.indexOf(q) === -1);
+            });
+        }
+
+        let pwBusy = false;
+        async function submitAdminPassword(e) {
+            if (e && e.preventDefault) e.preventDefault();
+            if (pwBusy) return;
+            const oldRaw = document.getElementById('adm-pw-old').value;
+            const newP = document.getElementById('adm-pw-new').value.trim();
+            const conf = document.getElementById('adm-pw-confirm').value.trim();
+            if (!oldRaw) { showModal('Data Belum Lengkap', 'Masukkan password admin saat ini.', 'error'); return; }
+            if (newP.length < 6) { showModal('Password Terlalu Pendek', 'Password baru minimal 6 karakter.', 'error'); return; }
+            if (newP !== conf) { showModal('Konfirmasi Tidak Cocok', 'Konfirmasi password tidak sama dengan password baru.', 'error'); return; }
+            if (newP === oldRaw.trim()) { showModal('Password Sama', 'Password baru harus berbeda dari password saat ini.', 'error'); return; }
+            pwBusy = true;
+            try {
+                const call = pw => api('admin_change_password', { p_token: tok(), p_old_password: pw, p_new_password: newP });
+                let r = await call(oldRaw);
+                if ((!r || !r.ok) && oldRaw.trim() !== oldRaw) r = await call(oldRaw.trim());
+                if (!r || !r.ok) { showModal('Gagal Mengubah Password', (r && r.error) || 'Password tidak dapat diubah.', 'error'); return; }
+                ['adm-pw-old', 'adm-pw-new', 'adm-pw-confirm'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+                showModal('Berhasil', 'Password admin berhasil diubah. Gunakan password baru saat login berikutnya.', 'success');
+            } catch (err) { handleApiError(err); }
+            finally { pwBusy = false; }
+        }
+
+        function saveStudentPassword(i) {
+            const st = DB.students[i];
+            const inp = document.getElementById('stu-pw-' + i);
+            if (!st || !inp) return;
+            const pw = inp.value.trim();
+            if (pw.length < 6) { showModal('Password Terlalu Pendek', 'Password baru siswa minimal 6 karakter.', 'error'); return; }
+            showModal('Konfirmasi Ubah Password', `Ubah password siswa ${st.name} (NISN ${st.nisn})?`, 'info', async () => {
+                try {
+                    const r = await api('admin_set_student_password', { p_token: tok(), p_nisn: st.nisn, p_new_password: pw });
+                    if (!r || !r.ok) { showModal('Gagal Mengubah Password', (r && r.error) || 'Password tidak dapat diubah.', 'error'); return; }
+                    inp.value = '';
+                    showModal('Berhasil', `Password ${st.name} sekarang: ${pw} . Sampaikan ke siswa yang bersangkutan.`, 'success');
                 } catch (err) { handleApiError(err); }
             });
         }
