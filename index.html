@@ -996,7 +996,7 @@
                 return;
             }
 
-            showModal('Konfirmasi Perpanjangan', 'Perpanjangan akan menambah 7 hari dari tanggal jatuh tempo saat ini. Lanjutkan?', 'info', async () => {
+            showModal('Konfirmasi Perpanjangan', 'Perpanjangan akan menambah 1 bulan dari tanggal jatuh tempo saat ini. Lanjutkan?', 'info', async () => {
                 try {
                     const r = await api('renew_book', { p_token: tok(), p_id: borrowId });
                     showModal('Berhasil Diperpanjang', `Masa pinjam diperpanjang hingga ${r.dueDate} (Perpanjangan ke-${r.renewCount})`, 'success', () => {
