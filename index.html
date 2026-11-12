@@ -452,6 +452,8 @@
         let modalHideTimer = null;
         function showModal(title, message, type = 'info', callback = null) {
             clearTimeout(modalHideTimer);
+            const oldDurBox = document.getElementById('borrow-dur-box');
+            if (oldDurBox) oldDurBox.remove();
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-message').innerText = message;
             const iconWrap = document.getElementById('modal-icon-wrapper');
@@ -935,12 +937,41 @@
         }
 
         let borrowBusy = false;
-        async function borrowBook(code) {
+
+        const BORROW_DURATIONS = [
+            { v: '7d', label: '7 hari' },
+            { v: '1m', label: '1 bulan' },
+            { v: '1s', label: '1 semester (6 bulan)' }
+        ];
+
+        // Langkah 1: pilih lama peminjaman
+        function borrowBook(code) {
+            if (borrowBusy) return;
+            const bk = getDB(STORAGE_KEY_BOOKS).find(x => x.code === code);
+            const judul = bk ? bk.title : code;
+            showModal('Pilih Lama Peminjaman', `Buku "${judul}"`, 'info', () => {
+                const picked = document.querySelector('input[name="borrow-dur"]:checked');
+                doBorrow(code, picked ? picked.value : '1m');
+            });
+            const box = document.createElement('div');
+            box.id = 'borrow-dur-box';
+            box.className = 'mb-6 -mt-3 space-y-2';
+            box.innerHTML = BORROW_DURATIONS.map(d => `
+                <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50">
+                    <input type="radio" name="borrow-dur" value="${d.v}" ${d.v === '1m' ? 'checked' : ''} class="accent-indigo-600">
+                    <span class="text-sm font-medium text-slate-800">${d.label}</span>
+                </label>`).join('');
+            document.getElementById('modal-actions').before(box);
+        }
+
+        // Langkah 2: proses peminjaman dengan durasi yang dipilih
+        async function doBorrow(code, dur) {
             if (borrowBusy) return;
             borrowBusy = true;
             try {
-                const r = await api('borrow_book', { p_token: tok(), p_code: code });
-                showModal('Peminjaman Berhasil', `Buku "${r.title}" berhasil dipinjam. Batas pengembalian: ${r.dueDate}`, 'success', () => {
+                const r = await api('borrow_book', { p_token: tok(), p_code: code, p_duration: dur });
+                const durLabel = (BORROW_DURATIONS.find(d => d.v === dur) || { label: '1 bulan' }).label;
+                showModal('Peminjaman Berhasil', `Buku "${r.title}" berhasil dipinjam selama ${durLabel}. Batas pengembalian: ${r.dueDate}`, 'success', () => {
                     renderStudentDashboard(currentStudentTab);
                 });
             } catch (err) {
@@ -1043,7 +1074,7 @@
                 return;
             }
 
-            showModal('Konfirmasi Perpanjangan', 'Perpanjangan akan menambah 1 bulan dari tanggal jatuh tempo saat ini. Lanjutkan?', 'info', async () => {
+            showModal('Konfirmasi Perpanjangan', 'Perpanjangan akan menambah waktu sesuai lama peminjaman awal (7 hari, 1 bulan, atau 1 semester) dari tanggal jatuh tempo saat ini. Lanjutkan?', 'info', async () => {
                 try {
                     const r = await api('renew_book', { p_token: tok(), p_id: borrowId });
                     showModal('Berhasil Diperpanjang', `Masa pinjam diperpanjang hingga ${r.dueDate} (Perpanjangan ke-${r.renewCount})`, 'success', () => {
