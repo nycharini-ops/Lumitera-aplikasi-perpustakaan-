@@ -293,6 +293,7 @@
 
         .lumi-spinner { width: 34px; height: 34px; margin: 0 auto; border-radius: 50%; border: 4px solid rgba(255,255,255,.25); border-top-color: #fde68a; animation: lumispin .8s linear infinite; }
         @keyframes lumispin { to { transform: rotate(360deg); } }
+        #reg-hp-wrap.reg-full { grid-column: 1 / -1; }
 </style>
 </head>
 <body class="bg-slate-50 text-slate-800 h-full flex flex-col antialiased">
@@ -571,7 +572,7 @@
                         
                         <form id="login-form" onsubmit="handleLogin(event)" class="space-y-5">
                             <div>
-                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">NISN atau Username Admin</label>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">NISN/NIP atau Username Admin</label>
                                 <div class="relative">
                                     <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400"><i class="fa-solid fa-user"></i></span>
                                     <input type="text" id="login-username" required autocapitalize="none" autocorrect="off" spellcheck="false" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition" placeholder="Masukkan NISN atau admin">
@@ -630,18 +631,19 @@
                 <div class="auth-wrap flex-1 flex items-center justify-center p-4 overflow-y-auto">
                     <div class="auth-card w-full max-w-lg bg-white rounded-3xl shadow-xl border border-slate-100 p-8 my-auto">
                         <div class="text-center mb-6">
-                            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Pendaftaran Siswa</h1>
+                            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Pendaftaran Siswa/Guru</h1>
                             <p class="text-sm text-slate-500 mt-1">Buat akun baru untuk akses perpustakaan</p>
                         </div>
 
                         <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4">
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">NISN (Min. 7 Digit)</label>
-                                    <input type="text" id="reg-nisn" required minlength="7" inputmode="numeric" pattern="\\d{7,}" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600" placeholder="Contoh: 0051234">
+                                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">NISN/NIP</label>
+                                    <input type="text" id="reg-nisn" oninput="onRegNisnInput()" required minlength="7" inputmode="numeric" pattern="\\d{7,}" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600" placeholder="Contoh: 0051234">
+                                    <p class="text-[11px] leading-snug text-slate-500 mt-1">NIP diisi oleh guru (18 digit) dan NISN diisi oleh siswa (min. 7 digit)</p>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Nama Lengkap</label>
+                                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5" id="reg-name-label">Nama Lengkap</label>
                                     <input type="text" id="reg-name" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600" placeholder="Nama lengkap siswa">
                                 </div>
                             </div>
@@ -658,11 +660,11 @@
                                 </div>
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label for="reg-hp" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">No. HP Siswa</label>
+                                <div id="reg-hp-wrap">
+                                    <label for="reg-hp" id="reg-hp-label" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">No. HP Siswa</label>
                                     <input type="tel" id="reg-hp" required inputmode="tel" autocomplete="tel" maxlength="16" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600" placeholder="Contoh: 081234567890">
                                 </div>
-                                <div>
+                                <div id="reg-ortu-wrap">
                                     <label for="reg-hp-ortu" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">No. HP Orang Tua / Wali</label>
                                     <input type="tel" id="reg-hp-ortu" required inputmode="tel" maxlength="16" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600" placeholder="Contoh: 081298765432">
                                 </div>
@@ -698,22 +700,46 @@
             return 'https://wa.me/' + (d.startsWith('0') ? '62' + d.slice(1) : d);
         }
 
+        // Pendaftar dengan 18 digit angka dianggap guru (NIP): kelas otomatis "Guru",
+        // "No. HP Siswa" menjadi "No. HP Guru", dan No. HP orang tua / wali disembunyikan.
+        function onRegNisnInput() {
+            const v = (document.getElementById('reg-nisn').value || '').trim();
+            const teacher = /^\d{18}$/.test(v);
+            const sel = document.getElementById('reg-kelas');
+            const wrap = document.getElementById('reg-ortu-wrap');
+            document.getElementById('reg-hp-wrap').classList.toggle('reg-full', teacher);
+            const ortu = document.getElementById('reg-hp-ortu');
+            document.getElementById('reg-hp-label').innerText = teacher ? 'No. HP Guru' : 'No. HP Siswa';
+            document.getElementById('reg-name').placeholder = teacher ? 'Nama lengkap guru' : 'Nama lengkap siswa';
+            if (teacher) {
+                if (!sel.querySelector('option[value="Guru"]')) sel.insertAdjacentHTML('beforeend', '<option value="Guru">Guru</option>');
+                sel.value = 'Guru'; sel.disabled = true;
+                wrap.style.display = 'none'; ortu.required = false; ortu.value = '';
+            } else {
+                const g = sel.querySelector('option[value="Guru"]');
+                if (g) g.remove();
+                if (sel.disabled) { sel.disabled = false; sel.value = ''; }
+                wrap.style.display = ''; ortu.required = true;
+            }
+        }
+
         function handleRegister(e) {
             e.preventDefault();
             const nisn = document.getElementById('reg-nisn').value.trim();
             const name = document.getElementById('reg-name').value.trim();
-            const kelas = document.getElementById('reg-kelas').value;
+            const isTeacher = /^\d{18}$/.test(nisn);
+            const kelas = isTeacher ? 'Guru' : document.getElementById('reg-kelas').value;
             const tglLahir = document.getElementById('reg-dob').value;
             const noHp = cleanPhone(document.getElementById('reg-hp').value);
-            const noHpOrtu = cleanPhone(document.getElementById('reg-hp-ortu').value);
+            const noHpOrtu = isTeacher ? null : cleanPhone(document.getElementById('reg-hp-ortu').value);
             const password = document.getElementById('reg-pass').value;
             const passConfirm = document.getElementById('reg-pass-confirm').value;
 
             if (!noHp) {
-                showModal('Pendaftaran Gagal', 'No. HP siswa tidak valid. Gunakan format seperti 081234567890.', 'error');
+                showModal('Pendaftaran Gagal', (isTeacher ? 'No. HP guru' : 'No. HP siswa') + ' tidak valid. Gunakan format seperti 081234567890.', 'error');
                 return;
             }
-            if (!noHpOrtu) {
+            if (!isTeacher && !noHpOrtu) {
                 showModal('Pendaftaran Gagal', 'No. HP orang tua / wali tidak valid. Gunakan format seperti 081298765432.', 'error');
                 return;
             }
@@ -764,7 +790,7 @@
                         <div class="flex items-center space-x-4">
                             <div class="text-right hidden sm:block">
                                 <p class="text-sm font-semibold text-slate-800"><i class="fa-solid fa-circle-user mr-1.5"></i>Halo, ${esc(session.name)}</p>
-                                <p class="text-xs text-indigo-600 font-medium">Kelas ${esc(session.kelas)}</p>
+                                <p class="text-xs text-indigo-600 font-medium">${session.kelas === 'Guru' ? 'Guru' : 'Kelas ' + esc(session.kelas)}</p>
                             </div>
                             <button onclick="logout()" class="p-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 transition" title="Keluar"><i class="fa-solid fa-right-from-bracket"></i></button>
                         </div>
@@ -1759,11 +1785,11 @@
                             <table class="w-full text-left border-collapse">
                                 <thead>
                                     <tr class="border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                                        <th class="pb-3 px-3">NISN</th>
+                                        <th class="pb-3 px-3">NISN / NIP</th>
                                         <th class="pb-3 px-3">Nama Lengkap</th>
                                         <th class="pb-3 px-3">Kelas</th>
                                         <th class="pb-3 px-3">Tanggal Lahir</th>
-                                        <th class="pb-3 px-3 whitespace-nowrap">No. HP Siswa</th>
+                                        <th class="pb-3 px-3 whitespace-nowrap">No. HP Siswa / Guru</th>
                                         <th class="pb-3 px-3 whitespace-nowrap">No. HP Ortu / Wali</th>
                                         <th class="pb-3 px-3 text-right">Aksi</th>
                                     </tr>
@@ -1807,10 +1833,10 @@
                     </div>
 
                     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-                        <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-key mr-2"></i>Ubah Password Siswa</h4>
-                        <div><label class="${lbl}">Pilih Siswa</label>
+                        <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-key mr-2"></i>Ubah Password Siswa / Guru</h4>
+                        <div><label class="${lbl}">Pilih Siswa / Guru</label>
                             <select id="set-stu-nisn" class="${inp}">
-                                <option value="">-- Pilih siswa --</option>
+                                <option value="">-- Pilih siswa / guru --</option>
                                 ${students.map(x => `<option value="${esc(x.nisn)}">${esc(x.name)} (${esc(x.nisn)}) - ${esc(x.kelas)}</option>`).join('')}
                             </select></div>
                         <div><label class="${lbl}">Password Baru Siswa (Min. 6 Karakter)</label><input type="password" id="set-stu-new" autocomplete="new-password" class="${inp}"></div>
