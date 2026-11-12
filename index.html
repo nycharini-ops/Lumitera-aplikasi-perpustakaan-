@@ -1691,80 +1691,130 @@
             reader.readAsArrayBuffer(file);
         }
 
-        function renderAdminMonitoring(container) {
-            const borrowings = getDB(STORAGE_KEY_BORROW).filter(b => !b.returned);
-            const history = getDB(STORAGE_KEY_HISTORY);
-            const today = new Date();
-            today.setHours(0,0,0,0);
+        // Urutan kelas baku: Guru, lalu X-1, X-2, ... XI-1, ... XII-12.
+        function kelasRank(k) {
+            if (k === 'Guru') return -1;
+            const m = /^(XII|XI|X)-(\d+)$/.exec(String(k));
+            return m ? ({ X: 1, XI: 2, XII: 3 }[m[1]]) * 1000 + Number(m[2]) : 9999;
+        }
+        function sortKelas(list) {
+            return list.sort((a, b) => (kelasRank(a) - kelasRank(b)) || String(a).localeCompare(String(b), 'id', { numeric: true }));
+        }
 
+        // Daftar kelas lengkap (selalu tampil berurutan, walau belum ada datanya) + kelas lain yang mungkin ada di data.
+        function allKelas(extra, withGuru) {
+            const set = new Set(extra || []);
+            ['X', 'XI', 'XII'].forEach(g => { for (let i = 1; i <= 12; i++) set.add(`${g}-${i}`); });
+            if (withGuru) set.add('Guru'); else set.delete('Guru');
+            return sortKelas([...set]);
+        }
+
+        // Monitoring: dua daftar (aktif & riwayat), masing-masing bisa dicari dan difilter kelas.
+        function loanWhoHTML(b) {
+            return `${esc(b.studentName)}<br><span class="text-xs text-slate-400 font-mono">${esc(b.nisn)}</span> <span class="text-xs text-slate-400">&middot; ${b.kelas === 'Guru' ? 'Guru' : esc(b.kelas || '-')}</span>`;
+        }
+        function loanMatches(b, q, k) {
+            if (k && b.kelas !== k) return false;
+            if (!q) return true;
+            return (b.studentName || '').toLowerCase().includes(q) || String(b.nisn).includes(q) || (b.judulBuku || '').toLowerCase().includes(q);
+        }
+        function applyLoanFilter(kind) {
+            const q = (document.getElementById(kind + '-search').value || '').trim().toLowerCase();
+            const k = document.getElementById(kind + '-kelas').value;
+            const all = kind === 'act' ? getDB(STORAGE_KEY_BORROW).filter(b => !b.returned) : getDB(STORAGE_KEY_HISTORY);
+            const list = all.filter(b => loanMatches(b, q, k));
+            const today = new Date(); today.setHours(0,0,0,0);
+            let rows;
+            if (kind === 'act') {
+                rows = list.map(b => {
+                    const due = parseDate(b.dueDate); due.setHours(0,0,0,0);
+                    const isLate = due < today;
+                    return `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="py-3 px-3 font-medium text-slate-900">${loanWhoHTML(b)}</td>
+                            <td class="py-3 px-3 text-slate-800">${esc(b.judulBuku)}</td>
+                            <td class="py-3 px-3 text-slate-600">${b.tglPinjam}</td>
+                            <td class="py-3 px-3 font-semibold ${isLate ? 'text-rose-600' : 'text-slate-800'}">${b.dueDate}</td>
+                            <td class="py-3 px-3">${isLate ? '<span class="px-2 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700">Terlambat</span>' : '<span class="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">Dipinjam</span>'}</td>
+                        </tr>`;
+                });
+            } else {
+                rows = list.map(h => `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-3 px-3 font-medium text-slate-900">${loanWhoHTML(h)}</td>
+                        <td class="py-3 px-3 text-slate-800">${esc(h.judulBuku)}</td>
+                        <td class="py-3 px-3 text-slate-600">${h.tglPinjam}</td>
+                        <td class="py-3 px-3 text-slate-600">${h.returnedDate || '-'}</td>
+                        <td class="py-3 px-3"><span class="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">${esc(h.status)}</span></td>
+                    </tr>`);
+            }
+            const emptyAll = kind === 'act' ? 'Tidak ada peminjaman aktif.' : 'Belum ada riwayat transaksi.';
+            document.getElementById(kind + '-body').innerHTML = rows.length ? rows.join('')
+                : `<tr><td colspan="5" class="py-6 text-center text-slate-400">${all.length ? 'Tidak ada data yang cocok.' : emptyAll}</td></tr>`;
+            document.getElementById(kind + '-count').innerText = (q || k) ? `${list.length} dari ${all.length} data` : `${all.length} data`;
+        }
+        function renderAdminMonitoring(container) {
+            const kelasList = allKelas(DB.loans.map(b => b.kelas).filter(Boolean), true);
+            const inp = 'w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500';
+            const filterBar = (kind) => `
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="sm:col-span-2"><input type="search" id="${kind}-search" oninput="applyLoanFilter('${kind}')" placeholder="Cari nama, NISN/NIP, atau judul buku..." class="${inp}"></div>
+                    <select id="${kind}-kelas" onchange="applyLoanFilter('${kind}')" class="${inp}">
+                        <option value="">Semua Kelas</option>
+                        ${kelasList.map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join('')}
+                    </select>
+                </div>`;
             container.innerHTML = `
                 <div class="max-w-6xl mx-auto space-y-6">
                     <h3 class="text-xl font-bold text-slate-900">Monitoring Peminjaman & Pengembalian</h3>
 
                     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-                        <h4 class="font-bold text-slate-800 text-base">Peminjaman Aktif</h4>
+                        <div class="flex items-center justify-between gap-2">
+                            <h4 class="font-bold text-slate-800 text-base">Peminjaman Aktif</h4>
+                            <span id="act-count" class="text-xs font-semibold text-slate-500"></span>
+                        </div>
+                        ${filterBar('act')}
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
                                 <thead>
                                     <tr class="border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                                        <th class="pb-3 px-3">Siswa</th>
+                                        <th class="pb-3 px-3">Peminjam</th>
                                         <th class="pb-3 px-3">Judul Buku</th>
                                         <th class="pb-3 px-3">Tgl Pinjam</th>
                                         <th class="pb-3 px-3">Jatuh Tempo</th>
                                         <th class="pb-3 px-3">Status</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-100 text-sm">
-                                    ${borrowings.length === 0 ? `<tr><td colspan="5" class="py-6 text-center text-slate-400">Tidak ada peminjaman aktif.</td></tr>` : 
-                                      borrowings.map(b => {
-                                          const due = parseDate(b.dueDate);
-                                          due.setHours(0,0,0,0);
-                                          const isLate = due < today;
-                                          return `
-                                              <tr class="hover:bg-slate-50 transition">
-                                                  <td class="py-3 px-3 font-medium text-slate-900">${esc(b.studentName)}<br><span class="text-xs text-slate-400 font-mono">${esc(b.nisn)}</span></td>
-                                                  <td class="py-3 px-3 text-slate-800">${esc(b.judulBuku)}</td>
-                                                  <td class="py-3 px-3 text-slate-600">${b.tglPinjam}</td>
-                                                  <td class="py-3 px-3 font-semibold ${isLate ? 'text-rose-600' : 'text-slate-800'}">${b.dueDate}</td>
-                                                  <td class="py-3 px-3">${isLate ? '<span class="px-2 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700">Terlambat</span>' : '<span class="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">Dipinjam</span>'}</td>
-                                              </tr>
-                                          `;
-                                      }).join('')}
-                                </tbody>
+                                <tbody id="act-body" class="divide-y divide-slate-100 text-sm"></tbody>
                             </table>
                         </div>
                     </div>
 
                     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-                        <h4 class="font-bold text-slate-800 text-base">Riwayat Peminjaman & Pengembalian Keseluruhan</h4>
+                        <div class="flex items-center justify-between gap-2">
+                            <h4 class="font-bold text-slate-800 text-base">Riwayat Peminjaman & Pengembalian Keseluruhan</h4>
+                            <span id="his-count" class="text-xs font-semibold text-slate-500"></span>
+                        </div>
+                        ${filterBar('his')}
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
                                 <thead>
                                     <tr class="border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                                        <th class="pb-3 px-3">Siswa</th>
+                                        <th class="pb-3 px-3">Peminjam</th>
                                         <th class="pb-3 px-3">Judul Buku</th>
                                         <th class="pb-3 px-3">Tgl Pinjam</th>
                                         <th class="pb-3 px-3">Tgl Kembali</th>
                                         <th class="pb-3 px-3">Status</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-100 text-sm">
-                                    ${history.length === 0 ? `<tr><td colspan="5" class="py-6 text-center text-slate-400">Belum ada riwayat transaksi.</td></tr>` : 
-                                      history.map(h => `
-                                          <tr class="hover:bg-slate-50 transition">
-                                              <td class="py-3 px-3 font-medium text-slate-900">${esc(h.studentName)}<br><span class="text-xs text-slate-400 font-mono">${esc(h.nisn)}</span></td>
-                                              <td class="py-3 px-3 text-slate-800">${esc(h.judulBuku)}</td>
-                                              <td class="py-3 px-3 text-slate-600">${h.tglPinjam}</td>
-                                              <td class="py-3 px-3 text-slate-600">${h.returnedDate || '-'}</td>
-                                              <td class="py-3 px-3"><span class="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">${h.status}</span></td>
-                                          </tr>
-                                      `).join('')}
-                                </tbody>
+                                <tbody id="his-body" class="divide-y divide-slate-100 text-sm"></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
             `;
+            applyLoanFilter('act');
+            applyLoanFilter('his');
         }
 
         function phoneCellHTML(p) {
@@ -1819,8 +1869,7 @@
         }
         function renderAdminStudents(container) {
             const everyone = getDB(STORAGE_KEY_USERS);
-            const kelasList = [...new Set(everyone.filter(x => !isTeacherRow(x)).map(x => x.kelas))]
-                .sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
+            const kelasList = allKelas(everyone.filter(x => !isTeacherRow(x)).map(x => x.kelas), false);
             const inp = 'w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500';
             container.innerHTML = `
                 <div class="max-w-6xl mx-auto space-y-6">
