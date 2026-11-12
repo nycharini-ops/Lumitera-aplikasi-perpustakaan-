@@ -1933,6 +1933,7 @@
         }
 
         function renderAdminSettings(container) {
+            resetPick = null;
             const students = getDB(STORAGE_KEY_USERS);
             const inp = 'w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500';
             const lbl = 'block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5';
@@ -1950,16 +1951,42 @@
 
                     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
                         <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-key mr-2"></i>Ubah Password Siswa / Guru</h4>
-                        <div><label class="${lbl}">Pilih Siswa / Guru</label>
-                            <select id="set-stu-nisn" class="${inp}">
-                                <option value="">-- Pilih siswa / guru --</option>
-                                ${students.map(x => `<option value="${esc(x.nisn)}">${esc(x.name)} (${esc(x.nisn)}) - ${esc(x.kelas)}</option>`).join('')}
-                            </select></div>
+                        <div>
+                            <label class="${lbl}">Cari Siswa / Guru</label>
+                            <input type="search" id="set-stu-search" oninput="onResetSearch()" autocomplete="off" placeholder="Ketik nama atau NISN/NIP..." class="${inp}">
+                            <div id="set-stu-results" class="mt-2 space-y-1"></div>
+                            <div id="set-stu-picked" class="mt-2 hidden"></div>
+                        </div>
                         <div><label class="${lbl}">Password Baru Siswa (Min. 6 Karakter)</label><input type="password" id="set-stu-new" autocomplete="new-password" class="${inp}"></div>
                         <div><label class="${lbl}">Konfirmasi Password Baru</label><input type="password" id="set-stu-new2" autocomplete="new-password" class="${inp}"></div>
                         <button type="button" onclick="resetStudentPassword()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm shadow-sm transition">Simpan Password Siswa</button>
                     </div>
                 </div>`;
+        }
+
+        let resetPick = null;
+        function onResetSearch() {
+            const q = (document.getElementById('set-stu-search').value || '').trim().toLowerCase();
+            const box = document.getElementById('set-stu-results');
+            if (resetPick) { resetPick = null; document.getElementById('set-stu-picked').classList.add('hidden'); }
+            if (!q) { box.innerHTML = ''; return; }
+            const list = getDB(STORAGE_KEY_USERS).filter(x => (x.name || '').toLowerCase().includes(q) || String(x.nisn).includes(q));
+            const shown = list.slice(0, 8);
+            box.innerHTML = shown.length
+                ? shown.map(x => `<button type="button" data-nisn="${esc(x.nisn)}" class="reset-opt w-full text-left px-4 py-2.5 rounded-xl bg-slate-50 hover:bg-indigo-50 border border-slate-200 text-sm transition"><span class="font-semibold text-slate-900">${esc(x.name)}</span> <span class="text-xs text-slate-500 font-mono">${esc(x.nisn)}</span> <span class="text-xs text-indigo-600 font-medium">&middot; ${x.kelas === 'Guru' ? 'Guru' : esc(x.kelas)}</span></button>`).join('')
+                    + (list.length > shown.length ? `<p class="text-xs text-slate-500 px-1">Menampilkan ${shown.length} dari ${list.length} hasil. Ketik lebih spesifik untuk mempersempit.</p>` : '')
+                : `<p class="text-sm text-slate-500 px-1">Tidak ada siswa/guru yang cocok.</p>`;
+            box.querySelectorAll('.reset-opt').forEach(btn => { btn.onclick = () => pickResetUser(btn.dataset.nisn); });
+        }
+        function pickResetUser(nisn) {
+            const x = getDB(STORAGE_KEY_USERS).find(u => String(u.nisn) === String(nisn));
+            if (!x) return;
+            resetPick = x.nisn;
+            document.getElementById('set-stu-results').innerHTML = '';
+            document.getElementById('set-stu-search').value = x.name;
+            const picked = document.getElementById('set-stu-picked');
+            picked.classList.remove('hidden');
+            picked.innerHTML = `<div class="px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-800"><i class="fa-solid fa-check mr-1"></i>Dipilih: <span class="font-semibold">${esc(x.name)}</span> <span class="font-mono text-xs">${esc(x.nisn)}</span> &middot; ${x.kelas === 'Guru' ? 'Guru' : esc(x.kelas)}</div>`;
         }
 
         let pwBusy = false;
@@ -1978,8 +2005,8 @@
         }
         async function resetStudentPassword() {
             if (pwBusy) return;
-            const nisn = document.getElementById('set-stu-nisn').value, n = document.getElementById('set-stu-new').value, n2 = document.getElementById('set-stu-new2').value;
-            if (!nisn) { showModal('Data Belum Lengkap', 'Pilih siswa terlebih dahulu.', 'error'); return; }
+            const nisn = resetPick || '', n = document.getElementById('set-stu-new').value, n2 = document.getElementById('set-stu-new2').value;
+            if (!nisn) { showModal('Data Belum Lengkap', 'Cari dan pilih siswa/guru terlebih dahulu dari hasil pencarian.', 'error'); return; }
             if (n.length < 6) { showModal('Password Terlalu Pendek', 'Password baru minimal 6 karakter.', 'error'); return; }
             if (n !== n2) { showModal('Konfirmasi Tidak Cocok', 'Password baru dan konfirmasinya harus sama.', 'error'); return; }
             pwBusy = true;
