@@ -1188,7 +1188,8 @@
                             <button onclick="renderAdminTab('books')" id="adm-btn-books" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-book w-5"></i><span>Kelola Buku</span></button>
                             <button onclick="renderAdminTab('monitoring')" id="adm-btn-monitoring" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-list-check w-5"></i><span>Monitoring Peminjaman</span></button>
                             <button onclick="renderAdminTab('returns')" id="adm-btn-returns" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-clock-rotate-left w-5"></i><span class="text-[9px] tracking-tight sm:text-sm sm:tracking-normal">Riwayat & Pengembalian</span></button>
-                            <button onclick="renderAdminTab('students')" id="adm-btn-students" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-users w-5"></i><span>Kelola Siswa/Guru</span></button>
+                            <button onclick="renderAdminTab('teachers')" id="adm-btn-teachers" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-user-shield w-5"></i><span>Kelola Guru</span></button>
+                            <button onclick="renderAdminTab('students')" id="adm-btn-students" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-users w-5"></i><span>Kelola Siswa</span></button>
                             <button onclick="renderAdminTab('settings')" id="adm-btn-settings" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-gear w-5"></i><span>Pengaturan</span></button>
                         </aside>
 
@@ -1201,7 +1202,7 @@
 
         let currentAdminTab = 'stats';
         async function renderAdminTab(tab) {
-            ['stats', 'books', 'monitoring', 'returns', 'students', 'settings'].forEach(t => {
+            ['stats', 'books', 'monitoring', 'returns', 'teachers', 'students', 'settings'].forEach(t => {
                 const btn = document.getElementById(`adm-btn-${t}`);
                 if (btn) {
                     btn.className = `w-full shrink-0 text-center sm:text-left px-1.5 sm:px-4 py-3 rounded-xl font-medium text-[11px] leading-tight sm:text-sm flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1.5 sm:gap-0 sm:space-x-3 transition ${t === tab ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'}`;
@@ -1219,6 +1220,7 @@
             else if (tab === 'monitoring') renderAdminMonitoring(pane);
             else if (tab === 'returns') renderAdminReturns(pane);
             else if (tab === 'students') renderAdminStudents(pane);
+            else if (tab === 'teachers') renderAdminTeachers(pane);
             else if (tab === 'settings') renderAdminSettings(pane);
         }
 
@@ -1866,7 +1868,7 @@
             return `<a href="tel:${esc(p)}" class="font-mono font-semibold underline decoration-dotted">${esc(p)}</a> <a href="${waLink(p)}" target="_blank" rel="noopener" title="Chat WhatsApp" class="ml-1 text-emerald-600"><i class="fa-brands fa-whatsapp"></i></a>`;
         }
 
-        // Kelola Siswa/Guru: dua daftar terpisah, masing-masing punya kolom pencarian.
+        // Kelola Siswa dan Kelola Guru: dua menu terpisah, masing-masing punya kolom pencarian.
         function isTeacherRow(x) { return x.kelas === 'Guru'; }
         function adminStudentRowHTML(s) {
             return `
@@ -1917,7 +1919,7 @@
             const inp = 'w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500';
             container.innerHTML = `
                 <div class="max-w-6xl mx-auto space-y-6">
-                    <h3 class="text-xl font-bold text-slate-900">Kelola Data Siswa/Guru Terdaftar</h3>
+                    <h3 class="text-xl font-bold text-slate-900">Kelola Data Siswa Terdaftar</h3>
 
                     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
                         <div class="flex items-center justify-between gap-2">
@@ -1948,6 +1950,16 @@
                             </table>
                         </div>
                     </div>
+                </div>
+            `;
+            applyStudentFilter();
+        }
+
+        function renderAdminTeachers(container) {
+            const inp = 'w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500';
+            container.innerHTML = `
+                <div class="max-w-6xl mx-auto space-y-6">
+                    <h3 class="text-xl font-bold text-slate-900">Kelola Data Guru Terdaftar</h3>
 
                     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
                         <div class="flex items-center justify-between gap-2">
@@ -1972,7 +1984,6 @@
                     </div>
                 </div>
             `;
-            applyStudentFilter();
             applyTeacherFilter();
         }
 
