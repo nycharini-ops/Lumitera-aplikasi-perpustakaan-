@@ -543,7 +543,7 @@
             renderLogin();
         }
 
-        function generateClassOptions(selected = '') {
+        function generateClassOptions(selected = '', includeGuru = true) {
             const grades = ['X', 'XI', 'XII'];
             let html = '<option value="">Pilih Kelas</option>';
             grades.forEach(g => {
@@ -552,6 +552,7 @@
                     html += `<option value="${val}" ${selected === val ? 'selected' : ''}>${val}</option>`;
                 }
             });
+            if (includeGuru) html += `<option value="Guru" ${selected === 'Guru' ? 'selected' : ''}>Guru</option>`;
             return html;
         }
 
@@ -568,7 +569,7 @@
                         
                         <form id="login-form" onsubmit="handleLogin(event)" class="space-y-5">
                             <div>
-                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">NISN atau Username Admin</label>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">NISN / NIP atau Username Admin</label>
                                 <div class="relative">
                                     <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400"><i class="fa-solid fa-user"></i></span>
                                     <input type="text" id="login-username" required autocapitalize="none" autocorrect="off" spellcheck="false" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition" placeholder="Masukkan NISN atau admin">
@@ -627,26 +628,27 @@
                 <div class="auth-wrap flex-1 flex items-center justify-center p-4 overflow-y-auto">
                     <div class="auth-card w-full max-w-lg bg-white rounded-3xl shadow-xl border border-slate-100 p-8 my-auto">
                         <div class="text-center mb-6">
-                            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Pendaftaran Siswa</h1>
+                            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Pendaftaran Siswa / Guru</h1>
                             <p class="text-sm text-slate-500 mt-1">Buat akun baru untuk akses perpustakaan</p>
                         </div>
 
                         <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4">
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">NISN (Min. 7 Digit)</label>
-                                    <input type="text" id="reg-nisn" required minlength="7" inputmode="numeric" pattern="\\d{7,}" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600" placeholder="Contoh: 0051234">
+                                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">NISN / NIP</label>
+                                    <input type="text" id="reg-nisn" required minlength="7" inputmode="numeric" pattern="\\d{7,}" oninput="onRegIdChange()" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600" placeholder="NISN (siswa) atau NIP (guru)">
+                                    <p class="text-[11px] text-slate-500 mt-1">Guru isi NIP (18 digit), dan siswa isi NISN (min. 7 digit).</p>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Nama Lengkap</label>
-                                    <input type="text" id="reg-name" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600" placeholder="Nama lengkap siswa">
+                                    <input type="text" id="reg-name" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600" placeholder="Nama lengkap">
                                 </div>
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Kelas</label>
                                     <select id="reg-kelas" required class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
-                                        ${generateClassOptions()}
+                                        ${generateClassOptions('', false)}
                                     </select>
                                 </div>
                                 <div>
@@ -655,11 +657,11 @@
                                 </div>
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label for="reg-hp" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">No. HP Siswa</label>
+                                <div id="reg-hp-wrap">
+                                    <label for="reg-hp" id="reg-hp-label" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">No. HP Siswa</label>
                                     <input type="tel" id="reg-hp" required inputmode="tel" autocomplete="tel" maxlength="16" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600" placeholder="Contoh: 081234567890">
                                 </div>
-                                <div>
+                                <div id="reg-hp-ortu-wrap">
                                     <label for="reg-hp-ortu" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">No. HP Orang Tua / Wali</label>
                                     <input type="tel" id="reg-hp-ortu" required inputmode="tel" maxlength="16" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600" placeholder="Contoh: 081298765432">
                                 </div>
@@ -695,22 +697,67 @@
             return 'https://wa.me/' + (d.startsWith('0') ? '62' + d.slice(1) : d);
         }
 
+        // NIP guru = 18 digit; selain itu dianggap NISN siswa
+        function isNipValue(v) { return /^\d{18}$/.test(String(v || '').trim()); }
+
+        function onRegIdChange() {
+            const isNip = isNipValue(document.getElementById('reg-nisn').value);
+            const sel = document.getElementById('reg-kelas');
+            if (!sel) return;
+            let opt = sel.querySelector('option[value="Guru"]');
+            if (isNip) {
+                if (!opt) {
+                    opt = document.createElement('option');
+                    opt.value = 'Guru';
+                    opt.textContent = 'Guru';
+                    sel.appendChild(opt);
+                }
+                sel.value = 'Guru';
+                sel.disabled = true;
+            } else {
+                sel.disabled = false;
+                if (opt) {
+                    if (sel.value === 'Guru') sel.value = '';
+                    opt.remove();
+                }
+            }
+
+            // Guru: No. HP Siswa menjadi No. HP Guru, No. HP Orang Tua / Wali disembunyikan
+            const hpLabel = document.getElementById('reg-hp-label');
+            const hpWrap = document.getElementById('reg-hp-wrap');
+            const ortuWrap = document.getElementById('reg-hp-ortu-wrap');
+            const ortuInput = document.getElementById('reg-hp-ortu');
+            if (hpLabel) hpLabel.textContent = isNip ? 'No. HP Guru' : 'No. HP Siswa';
+            if (hpWrap) hpWrap.classList.toggle('sm:col-span-2', isNip);
+            if (ortuWrap) ortuWrap.classList.toggle('hidden', isNip);
+            if (ortuInput) { ortuInput.required = !isNip; if (isNip) ortuInput.value = ''; }
+        }
+
         function handleRegister(e) {
             e.preventDefault();
             const nisn = document.getElementById('reg-nisn').value.trim();
             const name = document.getElementById('reg-name').value.trim();
-            const kelas = document.getElementById('reg-kelas').value;
+            const isNip = isNipValue(nisn);
+            const kelas = isNip ? 'Guru' : document.getElementById('reg-kelas').value;
             const tglLahir = document.getElementById('reg-dob').value;
             const noHp = cleanPhone(document.getElementById('reg-hp').value);
-            const noHpOrtu = cleanPhone(document.getElementById('reg-hp-ortu').value);
+            const noHpOrtu = isNip ? null : cleanPhone(document.getElementById('reg-hp-ortu').value);
             const password = document.getElementById('reg-pass').value;
             const passConfirm = document.getElementById('reg-pass-confirm').value;
 
-            if (!noHp) {
-                showModal('Pendaftaran Gagal', 'No. HP siswa tidak valid. Gunakan format seperti 081234567890.', 'error');
+            if (!/^\d{7,}$/.test(nisn)) {
+                showModal('Pendaftaran Gagal', 'NISN / NIP hanya boleh berisi angka (NISN minimal 7 digit, NIP 18 digit).', 'error');
                 return;
             }
-            if (!noHpOrtu) {
+            if (!isNip && (!kelas || kelas === 'Guru')) {
+                showModal('Pendaftaran Gagal', 'Siswa (NISN) wajib memilih kelas.', 'error');
+                return;
+            }
+            if (!noHp) {
+                showModal('Pendaftaran Gagal', (isNip ? 'No. HP guru' : 'No. HP siswa') + ' tidak valid. Gunakan format seperti 081234567890.', 'error');
+                return;
+            }
+            if (!isNip && !noHpOrtu) {
                 showModal('Pendaftaran Gagal', 'No. HP orang tua / wali tidak valid. Gunakan format seperti 081298765432.', 'error');
                 return;
             }
@@ -722,7 +769,7 @@
 
             api('register_student', { p_nisn: nisn, p_name: name, p_kelas: kelas, p_tgl_lahir: tglLahir || null, p_no_hp: noHp, p_no_hp_ortu: noHpOrtu, p_password: password })
                 .then(() => {
-                    showModal('Pendaftaran Berhasil!', 'Akun Anda berhasil didaftarkan. Silakan login.', 'success', () => { renderLogin(); });
+                    showModal('Pendaftaran Berhasil!', isNip ? 'Akun guru berhasil didaftarkan. Silakan login dengan NIP Anda.' : 'Akun Anda berhasil didaftarkan. Silakan login.', 'success', () => { renderLogin(); });
                 })
                 .catch(err => showModal('Pendaftaran Gagal', err.message, 'error'));
         }
@@ -761,7 +808,7 @@
                         <div class="flex items-center space-x-4">
                             <div class="text-right hidden sm:block">
                                 <p class="text-sm font-semibold text-slate-800"><i class="fa-solid fa-circle-user mr-1.5"></i>Halo, ${esc(session.name)}</p>
-                                <p class="text-xs text-indigo-600 font-medium">Kelas ${esc(session.kelas)}</p>
+                                <p class="text-xs text-indigo-600 font-medium">${session.kelas === 'Guru' ? 'Guru' : 'Kelas ' + esc(session.kelas)}</p>
                             </div>
                             <button onclick="logout()" class="p-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 transition" title="Keluar"><i class="fa-solid fa-right-from-bracket"></i></button>
                         </div>
@@ -1720,55 +1767,104 @@
             return `<a href="tel:${esc(p)}" class="font-mono font-semibold underline decoration-dotted">${esc(p)}</a> <a href="${waLink(p)}" target="_blank" rel="noopener" title="Chat WhatsApp" class="ml-1 text-emerald-600"><i class="fa-brands fa-whatsapp"></i></a>`;
         }
 
+        let stuFilter = { q: '', k: '' };
+
+        function setStuFilter(key, val) {
+            stuFilter[key] = val;
+            filterStudentsTable();
+        }
+
+        function filterStudentsTable() {
+            const q = (stuFilter.q || '').toLowerCase().trim();
+            const k = stuFilter.k || '';
+            const rows = document.querySelectorAll('#stu-rows tr[data-q]');
+            let shown = 0;
+            rows.forEach(tr => {
+                const ok = (!q || tr.dataset.q.indexOf(q) !== -1) && (!k || tr.dataset.kelas === k);
+                tr.classList.toggle('hidden', !ok);
+                if (ok) shown++;
+            });
+            const cnt = document.getElementById('stu-count');
+            if (cnt) cnt.textContent = `Menampilkan ${shown} dari ${rows.length} siswa` + (k ? ` (kelas ${k})` : '');
+            const empty = document.getElementById('stu-empty');
+            if (empty) empty.classList.toggle('hidden', shown !== 0);
+        }
+
         function renderAdminStudents(container) {
             const students = getDB(STORAGE_KEY_USERS);
             container.innerHTML = `
                 <div class="max-w-6xl mx-auto space-y-6">
-                    <div class="flex justify-between items-center">
+                    <div>
                         <h3 class="text-xl font-bold text-slate-900">Kelola Data Siswa Terdaftar</h3>
+                        <p class="text-xs text-slate-500 mt-1">Password siswa tersimpan terenkripsi sehingga tidak bisa dilihat. Jika siswa lupa, tekan tombol Reset di kolom Password untuk membuat password baru, lalu sampaikan ke siswa.</p>
                     </div>
 
                     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                        <div class="flex flex-col sm:flex-row gap-3 mb-3">
+                            <input type="text" id="stu-search" value="${esc(stuFilter.q)}" oninput="setStuFilter('q', this.value)" class="${SET_INPUT_CLS}" placeholder="Cari NISN / NIP atau nama...">
+                            <select id="stu-filter-kelas" onchange="setStuFilter('k', this.value)" class="${SET_INPUT_CLS} sm:w-56">${generateClassOptions(stuFilter.k).replace('>Pilih Kelas<', '>Semua Kelas<')}</select>
+                        </div>
+                        <p id="stu-count" class="text-xs text-slate-500 mb-3"></p>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
                                 <thead>
                                     <tr class="border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                                        <th class="pb-3 px-3">NISN</th>
+                                        <th class="pb-3 px-3">NISN / NIP</th>
                                         <th class="pb-3 px-3">Nama Lengkap</th>
                                         <th class="pb-3 px-3">Kelas</th>
                                         <th class="pb-3 px-3">Tanggal Lahir</th>
                                         <th class="pb-3 px-3 whitespace-nowrap">No. HP Siswa</th>
                                         <th class="pb-3 px-3 whitespace-nowrap">No. HP Ortu / Wali</th>
+                                        <th class="pb-3 px-3">Password</th>
                                         <th class="pb-3 px-3 text-right">Aksi</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-100 text-sm">
+                                <tbody id="stu-rows" class="divide-y divide-slate-100 text-sm">
                                     ${students.map(s => `
-                                        <tr class="hover:bg-slate-50 transition">
+                                        <tr class="hover:bg-slate-50 transition" data-q="${esc((String(s.nisn) + ' ' + s.name).toLowerCase())}" data-kelas="${esc(s.kelas)}">
                                             <td class="py-3 px-3 font-mono font-bold text-slate-800">${esc(s.nisn)}</td>
                                             <td class="py-3 px-3 font-semibold text-slate-900">${esc(s.name)}</td>
                                             <td class="py-3 px-3"><span class="px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">${esc(s.kelas)}</span></td>
                                             <td class="py-3 px-3 text-slate-600">${s.tglLahir || '-'}</td>
                                             <td class="py-3 px-3 whitespace-nowrap">${phoneCellHTML(s.noHp)}</td>
                                             <td class="py-3 px-3 whitespace-nowrap">${phoneCellHTML(s.noHpOrtu)}</td>
+                                            <td class="py-3 px-3 whitespace-nowrap">
+                                                <span class="font-mono tracking-widest text-slate-400">••••••••</span>
+                                                <button onclick="resetStudentPassword('${s.nisn}')" class="ml-2 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-medium transition" title="Buat password baru untuk siswa ini"><i class="fa-solid fa-key mr-1"></i>Reset</button>
+                                            </td>
                                             <td class="py-3 px-3 text-right sticky right-0 bg-white">
                                                 <button onclick="deleteStudent('${s.nisn}')" class="p-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 rounded-xl transition" title="Hapus Akun Siswa"><i class="fa-solid fa-trash"></i></button>
                                             </td>
                                         </tr>
                                     `).join('')}
+                                    <tr id="stu-empty" class="hidden"><td colspan="8" class="py-8 text-center text-slate-500">Tidak ada siswa yang cocok dengan pencarian atau kelas ini.</td></tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
             `;
+            filterStudentsTable();
         }
 
         function deleteStudent(nisn) {
-            showModal('Konfirmasi Hapus Akun', `Hapus siswa dengan NISN ${nisn}? Riwayat peminjamannya juga ikut terhapus.`, 'info', async () => {
+            showModal('Konfirmasi Hapus Akun', `Hapus akun dengan NISN / NIP ${nisn}? Riwayat peminjamannya juga ikut terhapus.`, 'info', async () => {
                 try {
                     await api('admin_delete_student', { p_token: tok(), p_nisn: nisn });
                     showModal('Berhasil', 'Akun siswa berhasil dihapus.', 'success', () => { renderAdminTab('students'); });
+                } catch (err) { handleApiError(err); }
+            });
+        }
+
+        function resetStudentPassword(nisn) {
+            const st = DB.students.find(x => String(x.nisn) === String(nisn));
+            const nama = st ? st.name : nisn;
+            showModal('Reset Password Siswa', `Buat password baru untuk ${nama} (NISN / NIP ${nisn})? Password lama tidak bisa dipakai lagi.`, 'info', async () => {
+                const pw = genPassword();
+                try {
+                    const r = await api('admin_set_student_password', { p_token: tok(), p_nisn: String(nisn), p_new_password: pw });
+                    if (!r || !r.ok) { showModal('Gagal Reset Password', (r && r.error) || 'Password tidak dapat direset.', 'error'); return; }
+                    showModal('Password Baru Siswa', `Password baru ${nama}: ${pw} . Catat dan sampaikan ke siswa. Password ini tidak akan ditampilkan lagi.`, 'success');
                 } catch (err) { handleApiError(err); }
             });
         }
@@ -1814,12 +1910,12 @@
                     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                         <h4 class="text-base font-bold text-slate-900 mb-1"><i class="fa-solid fa-key mr-2"></i>Password Siswa</h4>
                         <p class="text-xs text-slate-500 mb-4">Atur ulang password siswa yang lupa. Ketik password baru di baris siswa, lalu tekan Simpan. Tombol kunci membuat password acak.</p>
-                        <input type="text" id="settings-search" oninput="filterSettingsStudents(this.value)" class="${SET_INPUT_CLS} mb-4" placeholder="Cari NISN, nama, atau kelas...">
+                        <input type="text" id="settings-search" oninput="filterSettingsStudents(this.value)" class="${SET_INPUT_CLS} mb-4" placeholder="Cari NISN / NIP, nama, atau kelas...">
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
                                 <thead>
                                     <tr class="border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                                        <th class="pb-3 px-3">NISN</th>
+                                        <th class="pb-3 px-3">NISN / NIP</th>
                                         <th class="pb-3 px-3">Nama</th>
                                         <th class="pb-3 px-3">Kelas</th>
                                         <th class="pb-3 px-3">Password Baru</th>
@@ -1884,7 +1980,7 @@
             if (!st || !inp) return;
             const pw = inp.value.trim();
             if (pw.length < 6) { showModal('Password Terlalu Pendek', 'Password baru siswa minimal 6 karakter.', 'error'); return; }
-            showModal('Konfirmasi Ubah Password', `Ubah password siswa ${st.name} (NISN ${st.nisn})?`, 'info', async () => {
+            showModal('Konfirmasi Ubah Password', `Ubah password siswa ${st.name} (NISN / NIP ${st.nisn})?`, 'info', async () => {
                 try {
                     const r = await api('admin_set_student_password', { p_token: tok(), p_nisn: st.nisn, p_new_password: pw });
                     if (!r || !r.ok) { showModal('Gagal Mengubah Password', (r && r.error) || 'Password tidak dapat diubah.', 'error'); return; }
