@@ -1187,7 +1187,7 @@
                             <button onclick="renderAdminTab('stats')" id="adm-btn-stats" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-chart-pie w-5"></i><span>Statistik Utama</span></button>
                             <button onclick="renderAdminTab('books')" id="adm-btn-books" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-book w-5"></i><span>Kelola Buku</span></button>
                             <button onclick="renderAdminTab('monitoring')" id="adm-btn-monitoring" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-list-check w-5"></i><span>Monitoring Peminjaman</span></button>
-                            <button onclick="renderAdminTab('students')" id="adm-btn-students" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-users w-5"></i><span>Kelola Siswa</span></button>
+                            <button onclick="renderAdminTab('students')" id="adm-btn-students" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-users w-5"></i><span>Kelola Siswa/Guru</span></button>
                             <button onclick="renderAdminTab('settings')" id="adm-btn-settings" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-gear w-5"></i><span>Pengaturan</span></button>
                         </aside>
 
@@ -1772,48 +1772,115 @@
             return `<a href="tel:${esc(p)}" class="font-mono font-semibold underline decoration-dotted">${esc(p)}</a> <a href="${waLink(p)}" target="_blank" rel="noopener" title="Chat WhatsApp" class="ml-1 text-emerald-600"><i class="fa-brands fa-whatsapp"></i></a>`;
         }
 
+        // Kelola Siswa/Guru: dua daftar terpisah, masing-masing punya kolom pencarian.
+        function isTeacherRow(x) { return x.kelas === 'Guru'; }
+        function adminStudentRowHTML(s) {
+            return `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="py-3 px-3 font-mono font-bold text-slate-800">${esc(s.nisn)}</td>
+                    <td class="py-3 px-3 font-semibold text-slate-900">${esc(s.name)}</td>
+                    <td class="py-3 px-3"><span class="px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">${esc(s.kelas)}</span></td>
+                    <td class="py-3 px-3 text-slate-600">${s.tglLahir || '-'}</td>
+                    <td class="py-3 px-3 whitespace-nowrap">${phoneCellHTML(s.noHp)}</td>
+                    <td class="py-3 px-3 whitespace-nowrap">${phoneCellHTML(s.noHpOrtu)}</td>
+                    <td class="py-3 px-3 text-right sticky right-0 bg-white">
+                        <button onclick="deleteStudent('${s.nisn}')" class="p-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 rounded-xl transition" title="Hapus Akun Siswa"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>`;
+        }
+        function adminTeacherRowHTML(s) {
+            return `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="py-3 px-3 font-mono font-bold text-slate-800">${esc(s.nisn)}</td>
+                    <td class="py-3 px-3 font-semibold text-slate-900">${esc(s.name)}</td>
+                    <td class="py-3 px-3 text-slate-600">${s.tglLahir || '-'}</td>
+                    <td class="py-3 px-3 whitespace-nowrap">${phoneCellHTML(s.noHp)}</td>
+                    <td class="py-3 px-3 text-right sticky right-0 bg-white">
+                        <button onclick="deleteStudent('${s.nisn}')" class="p-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 rounded-xl transition" title="Hapus Akun Guru"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>`;
+        }
+        function applyStudentFilter() {
+            const q = (document.getElementById('stu-search').value || '').trim().toLowerCase();
+            const k = document.getElementById('stu-kelas').value;
+            const all = getDB(STORAGE_KEY_USERS).filter(x => !isTeacherRow(x));
+            const list = all.filter(x => (!k || x.kelas === k) && (!q || (x.name || '').toLowerCase().includes(q) || String(x.nisn).includes(q)));
+            document.getElementById('stu-body').innerHTML = list.length ? list.map(adminStudentRowHTML).join('')
+                : `<tr><td colspan="7" class="py-8 text-center text-slate-400">Tidak ada siswa yang cocok.</td></tr>`;
+            document.getElementById('stu-count').innerText = (q || k) ? `${list.length} dari ${all.length} siswa` : `${all.length} siswa`;
+        }
+        function applyTeacherFilter() {
+            const q = (document.getElementById('gur-search').value || '').trim().toLowerCase();
+            const all = getDB(STORAGE_KEY_USERS).filter(isTeacherRow);
+            const list = all.filter(x => !q || (x.name || '').toLowerCase().includes(q) || String(x.nisn).includes(q));
+            document.getElementById('gur-body').innerHTML = list.length ? list.map(adminTeacherRowHTML).join('')
+                : `<tr><td colspan="5" class="py-8 text-center text-slate-400">Tidak ada guru yang cocok.</td></tr>`;
+            document.getElementById('gur-count').innerText = q ? `${list.length} dari ${all.length} guru` : `${all.length} guru`;
+        }
         function renderAdminStudents(container) {
-            const students = getDB(STORAGE_KEY_USERS);
+            const everyone = getDB(STORAGE_KEY_USERS);
+            const kelasList = [...new Set(everyone.filter(x => !isTeacherRow(x)).map(x => x.kelas))]
+                .sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
+            const inp = 'w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500';
             container.innerHTML = `
                 <div class="max-w-6xl mx-auto space-y-6">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-xl font-bold text-slate-900">Kelola Data Siswa Terdaftar</h3>
-                    </div>
+                    <h3 class="text-xl font-bold text-slate-900">Kelola Data Siswa/Guru Terdaftar</h3>
 
-                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+                        <div class="flex items-center justify-between gap-2">
+                            <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-users mr-2"></i>Daftar Siswa</h4>
+                            <span id="stu-count" class="text-xs font-semibold text-slate-500"></span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div class="sm:col-span-2"><input type="search" id="stu-search" oninput="applyStudentFilter()" placeholder="Cari nama atau NISN..." class="${inp}"></div>
+                            <select id="stu-kelas" onchange="applyStudentFilter()" class="${inp}">
+                                <option value="">Semua Kelas</option>
+                                ${kelasList.map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join('')}
+                            </select>
+                        </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
                                 <thead>
                                     <tr class="border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                                        <th class="pb-3 px-3">NISN / NIP</th>
+                                        <th class="pb-3 px-3">NISN</th>
                                         <th class="pb-3 px-3">Nama Lengkap</th>
                                         <th class="pb-3 px-3">Kelas</th>
                                         <th class="pb-3 px-3">Tanggal Lahir</th>
-                                        <th class="pb-3 px-3 whitespace-nowrap">No. HP Siswa / Guru</th>
+                                        <th class="pb-3 px-3 whitespace-nowrap">No. HP Siswa</th>
                                         <th class="pb-3 px-3 whitespace-nowrap">No. HP Ortu / Wali</th>
                                         <th class="pb-3 px-3 text-right">Aksi</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-100 text-sm">
-                                    ${students.map(s => `
-                                        <tr class="hover:bg-slate-50 transition">
-                                            <td class="py-3 px-3 font-mono font-bold text-slate-800">${esc(s.nisn)}</td>
-                                            <td class="py-3 px-3 font-semibold text-slate-900">${esc(s.name)}</td>
-                                            <td class="py-3 px-3"><span class="px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">${esc(s.kelas)}</span></td>
-                                            <td class="py-3 px-3 text-slate-600">${s.tglLahir || '-'}</td>
-                                            <td class="py-3 px-3 whitespace-nowrap">${phoneCellHTML(s.noHp)}</td>
-                                            <td class="py-3 px-3 whitespace-nowrap">${phoneCellHTML(s.noHpOrtu)}</td>
-                                            <td class="py-3 px-3 text-right sticky right-0 bg-white">
-                                                <button onclick="deleteStudent('${s.nisn}')" class="p-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 rounded-xl transition" title="Hapus Akun Siswa"><i class="fa-solid fa-trash"></i></button>
-                                            </td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
+                                <tbody id="stu-body" class="divide-y divide-slate-100 text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+                        <div class="flex items-center justify-between gap-2">
+                            <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-user-shield mr-2"></i>Daftar Guru</h4>
+                            <span id="gur-count" class="text-xs font-semibold text-slate-500"></span>
+                        </div>
+                        <input type="search" id="gur-search" oninput="applyTeacherFilter()" placeholder="Cari nama atau NIP..." class="${inp}">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                                        <th class="pb-3 px-3">NIP</th>
+                                        <th class="pb-3 px-3">Nama Lengkap</th>
+                                        <th class="pb-3 px-3">Tanggal Lahir</th>
+                                        <th class="pb-3 px-3 whitespace-nowrap">No. HP Guru</th>
+                                        <th class="pb-3 px-3 text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gur-body" class="divide-y divide-slate-100 text-sm"></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
             `;
+            applyStudentFilter();
+            applyTeacherFilter();
         }
 
         function renderAdminSettings(container) {
@@ -1875,10 +1942,10 @@
         }
 
         function deleteStudent(nisn) {
-            showModal('Konfirmasi Hapus Akun', `Hapus siswa dengan NISN ${nisn}? Riwayat peminjamannya juga ikut terhapus.`, 'info', async () => {
+            showModal('Konfirmasi Hapus Akun', `Hapus akun dengan NISN/NIP ${nisn}? Riwayat peminjamannya juga ikut terhapus.`, 'info', async () => {
                 try {
                     await api('admin_delete_student', { p_token: tok(), p_nisn: nisn });
-                    showModal('Berhasil', 'Akun siswa berhasil dihapus.', 'success', () => { renderAdminTab('students'); });
+                    showModal('Berhasil', 'Akun berhasil dihapus.', 'success', () => { renderAdminTab('students'); });
                 } catch (err) { handleApiError(err); }
             });
         }
