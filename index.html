@@ -888,12 +888,34 @@
         }
 
         let borrowBusy = false;
-        async function borrowBook(code) {
+        const LOAN_OPTIONS = [
+            { days: 7, label: '7 Hari' },
+            { days: 30, label: '1 Bulan' },
+            { days: 180, label: '1 Semester' }
+        ];
+        function loanLabel(d) {
+            const o = LOAN_OPTIONS.find(x => x.days === Number(d));
+            return o ? o.label : (Number(d) || 7) + ' hari';
+        }
+        // Langkah 1: siswa memilih lama pinjam. Langkah 2: kirim ke server.
+        function borrowBook(code) {
+            if (borrowBusy) return;
+            const bk = DB.books.find(b => b.code === code);
+            showModal('Pilih Lama Pinjam', `Berapa lama Anda ingin meminjam buku "${bk ? bk.title : code}"?`, 'info');
+            document.getElementById('modal-actions').innerHTML =
+                `<div class="w-full flex flex-col gap-2">` +
+                LOAN_OPTIONS.map(o => `<button type="button" data-days="${o.days}" class="loan-opt w-full px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm shadow-sm transition">${o.label} <span class="opacity-80 text-xs">(${o.days} hari)</span></button>`).join('') +
+                `<button type="button" onclick="closeModal()" class="w-full px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm transition">Batal</button></div>`;
+            document.querySelectorAll('#modal-actions .loan-opt').forEach(btn => {
+                btn.onclick = () => { closeModal(true); doBorrow(code, Number(btn.dataset.days)); };
+            });
+        }
+        async function doBorrow(code, days) {
             if (borrowBusy) return;
             borrowBusy = true;
             try {
-                const r = await api('borrow_book', { p_token: tok(), p_code: code });
-                showModal('Peminjaman Berhasil', `Buku "${r.title}" berhasil dipinjam. Batas pengembalian: ${r.dueDate}`, 'success', () => {
+                const r = await api('borrow_book', { p_token: tok(), p_code: code, p_days: days });
+                showModal('Peminjaman Berhasil', `Buku "${r.title}" berhasil dipinjam selama ${loanLabel(days)}. Batas pengembalian: ${r.dueDate}`, 'success', () => {
                     renderStudentDashboard(currentStudentTab);
                 });
             } catch (err) {
@@ -932,6 +954,7 @@
                             <p class="text-[11px] text-slate-400 font-mono">${esc(b.codeBuku)}${renewBadge}</p>
                             <div class="mt-2 text-xs text-slate-500 space-y-0.5">
                                 <p>Pinjam: ${b.tglPinjam}</p>
+                                <p>Lama pinjam: <span class="font-semibold text-slate-800">${loanLabel(b.loanPeriod || 7)}</span></p>
                                 <p>Jatuh tempo: <span class="font-semibold ${isLate ? 'text-rose-600' : 'text-slate-800'}">${b.dueDate}</span></p>
                             </div>
                             <div class="mt-2">${statusBadge}</div>
@@ -996,7 +1019,7 @@
                 return;
             }
 
-            showModal('Konfirmasi Perpanjangan', 'Perpanjangan akan menambah 7 hari dari tanggal jatuh tempo saat ini. Lanjutkan?', 'info', async () => {
+            showModal('Konfirmasi Perpanjangan', `Perpanjangan akan menambah ${loanLabel(item.loanPeriod || 7)} (${item.loanPeriod || 7} hari) dari tanggal jatuh tempo saat ini. Lanjutkan?`, 'info', async () => {
                 try {
                     const r = await api('renew_book', { p_token: tok(), p_id: borrowId });
                     showModal('Berhasil Diperpanjang', `Masa pinjam diperpanjang hingga ${r.dueDate} (Perpanjangan ke-${r.renewCount})`, 'success', () => {
