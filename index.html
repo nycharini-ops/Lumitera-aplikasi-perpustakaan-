@@ -1187,6 +1187,7 @@
                             <button onclick="renderAdminTab('stats')" id="adm-btn-stats" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-chart-pie w-5"></i><span>Statistik Utama</span></button>
                             <button onclick="renderAdminTab('books')" id="adm-btn-books" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-book w-5"></i><span>Kelola Buku</span></button>
                             <button onclick="renderAdminTab('monitoring')" id="adm-btn-monitoring" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-list-check w-5"></i><span>Monitoring Peminjaman</span></button>
+                            <button onclick="renderAdminTab('returns')" id="adm-btn-returns" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-clock-rotate-left w-5"></i><span class="text-[9px] tracking-tight sm:text-sm sm:tracking-normal">Riwayat & Pengembalian</span></button>
                             <button onclick="renderAdminTab('students')" id="adm-btn-students" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-users w-5"></i><span>Kelola Siswa/Guru</span></button>
                             <button onclick="renderAdminTab('settings')" id="adm-btn-settings" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-gear w-5"></i><span>Pengaturan</span></button>
                         </aside>
@@ -1200,7 +1201,7 @@
 
         let currentAdminTab = 'stats';
         async function renderAdminTab(tab) {
-            ['stats', 'books', 'monitoring', 'students', 'settings'].forEach(t => {
+            ['stats', 'books', 'monitoring', 'returns', 'students', 'settings'].forEach(t => {
                 const btn = document.getElementById(`adm-btn-${t}`);
                 if (btn) {
                     btn.className = `w-full shrink-0 text-center sm:text-left px-1.5 sm:px-4 py-3 rounded-xl font-medium text-[11px] leading-tight sm:text-sm flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1.5 sm:gap-0 sm:space-x-3 transition ${t === tab ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'}`;
@@ -1216,6 +1217,7 @@
             if (tab === 'stats') renderAdminStats(pane);
             else if (tab === 'books') renderAdminBooks(pane);
             else if (tab === 'monitoring') renderAdminMonitoring(pane);
+            else if (tab === 'returns') renderAdminReturns(pane);
             else if (tab === 'students') renderAdminStudents(pane);
             else if (tab === 'settings') renderAdminSettings(pane);
         }
@@ -1721,11 +1723,18 @@
         function applyLoanFilter(kind) {
             const q = (document.getElementById(kind + '-search').value || '').trim().toLowerCase();
             const k = document.getElementById(kind + '-kelas').value;
-            const all = kind === 'act' ? getDB(STORAGE_KEY_BORROW).filter(b => !b.returned) : getDB(STORAGE_KEY_HISTORY);
-            const list = all.filter(b => loanMatches(b, q, k));
+            const all = kind === 'act' ? getDB(STORAGE_KEY_BORROW).filter(b => !b.returned)
+                      : kind === 'ret' ? getDB(STORAGE_KEY_HISTORY)
+                      : getDB(STORAGE_KEY_HISTORY);
             const today = new Date(); today.setHours(0,0,0,0);
-            let rows;
+            const stSel = document.getElementById('act-status');
+            const st = (kind === 'act' && stSel) ? stSel.value : '';
+            const isLateLoan = b => { const d = parseDate(b.dueDate); if (!d) return false; d.setHours(0,0,0,0); return d < today; };
+            const list = all.filter(b => loanMatches(b, q, k) && (!st || (st === 'terlambat' ? isLateLoan(b) : !isLateLoan(b))));
+            const badge = (cls, txt) => `<span class="px-2 py-0.5 rounded-full text-xs font-medium ${cls}">${txt}</span>`;
+            let rows, cols;
             if (kind === 'act') {
+                cols = 5;
                 rows = list.map(b => {
                     const due = parseDate(b.dueDate); due.setHours(0,0,0,0);
                     const isLate = due < today;
@@ -1735,45 +1744,72 @@
                             <td class="py-3 px-3 text-slate-800">${esc(b.judulBuku)}</td>
                             <td class="py-3 px-3 text-slate-600">${b.tglPinjam}</td>
                             <td class="py-3 px-3 font-semibold ${isLate ? 'text-rose-600' : 'text-slate-800'}">${b.dueDate}</td>
-                            <td class="py-3 px-3">${isLate ? '<span class="px-2 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700">Terlambat</span>' : '<span class="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">Dipinjam</span>'}</td>
+                            <td class="py-3 px-3">${isLate ? badge('bg-rose-50 text-rose-700', 'Terlambat') : badge('bg-emerald-50 text-emerald-700', 'Dipinjam')}</td>
+                        </tr>`;
+                });
+            } else if (kind === 'ret') {
+                cols = 6;
+                rows = list.map(h => {
+                    const due = parseDate(h.dueDate), back = h.returnedDate ? parseDate(h.returnedDate) : null;
+                    if (due) due.setHours(0,0,0,0); if (back) back.setHours(0,0,0,0);
+                    const late = due && back ? Math.round((back - due) / 86400000) : 0;
+                    return `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="py-3 px-3 font-medium text-slate-900">${loanWhoHTML(h)}</td>
+                            <td class="py-3 px-3 text-slate-800">${esc(h.judulBuku)}</td>
+                            <td class="py-3 px-3 text-slate-600">${h.tglPinjam}</td>
+                            <td class="py-3 px-3 text-slate-600">${h.dueDate}</td>
+                            <td class="py-3 px-3 text-slate-800 font-semibold">${h.returnedDate || '-'}</td>
+                            <td class="py-3 px-3">${late > 0 ? badge('bg-rose-50 text-rose-700', `Terlambat ${late} hari`) : badge('bg-emerald-50 text-emerald-700', 'Tepat Waktu')}</td>
                         </tr>`;
                 });
             } else {
+                cols = 5;
                 rows = list.map(h => `
                     <tr class="hover:bg-slate-50 transition">
                         <td class="py-3 px-3 font-medium text-slate-900">${loanWhoHTML(h)}</td>
                         <td class="py-3 px-3 text-slate-800">${esc(h.judulBuku)}</td>
                         <td class="py-3 px-3 text-slate-600">${h.tglPinjam}</td>
                         <td class="py-3 px-3 text-slate-600">${h.returnedDate || '-'}</td>
-                        <td class="py-3 px-3"><span class="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">${esc(h.status)}</span></td>
+                        <td class="py-3 px-3"><span class="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">Dikembalikan</span></td>
                     </tr>`);
             }
-            const emptyAll = kind === 'act' ? 'Tidak ada peminjaman aktif.' : 'Belum ada riwayat transaksi.';
+            const emptyAll = kind === 'act' ? 'Tidak ada peminjaman aktif.' : 'Belum ada buku yang dikembalikan.';
             document.getElementById(kind + '-body').innerHTML = rows.length ? rows.join('')
-                : `<tr><td colspan="5" class="py-6 text-center text-slate-400">${all.length ? 'Tidak ada data yang cocok.' : emptyAll}</td></tr>`;
-            document.getElementById(kind + '-count').innerText = (q || k) ? `${list.length} dari ${all.length} data` : `${all.length} data`;
+                : `<tr><td colspan="${cols}" class="py-6 text-center text-slate-400">${all.length ? 'Tidak ada data yang cocok.' : emptyAll}</td></tr>`;
+            document.getElementById(kind + '-count').innerText = (q || k || st) ? `${list.length} dari ${all.length} data` : `${all.length} data`;
         }
-        function renderAdminMonitoring(container) {
-            const kelasList = allKelas(DB.loans.map(b => b.kelas).filter(Boolean), true);
+        function loanKelasList() {
+            return allKelas(DB.loans.map(b => b.kelas).filter(Boolean), true);
+        }
+        function loanFilterBar(kind) {
             const inp = 'w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500';
-            const filterBar = (kind) => `
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div class="sm:col-span-2"><input type="search" id="${kind}-search" oninput="applyLoanFilter('${kind}')" placeholder="Cari nama, NISN/NIP, atau judul buku..." class="${inp}"></div>
+            const statusSel = kind === 'act' ? `
+                    <select id="act-status" onchange="applyLoanFilter('act')" class="${inp}">
+                        <option value="">Semua Status</option>
+                        <option value="dipinjam">Sedang Dipinjam</option>
+                        <option value="terlambat">Terlambat Dikembalikan</option>
+                    </select>` : '';
+            return `
+                <div class="grid grid-cols-1 sm:grid-cols-${kind === 'act' ? '4' : '3'} gap-3">
+                    <div class="sm:col-span-2"><input type="search" id="${kind}-search" oninput="applyLoanFilter('${kind}')" placeholder="Cari nama, NISN/NIP..." class="${inp}"></div>
                     <select id="${kind}-kelas" onchange="applyLoanFilter('${kind}')" class="${inp}">
                         <option value="">Semua Kelas</option>
-                        ${kelasList.map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join('')}
-                    </select>
+                        ${loanKelasList().map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join('')}
+                    </select>${statusSel}
                 </div>`;
+        }
+        function renderAdminMonitoring(container) {
             container.innerHTML = `
                 <div class="max-w-6xl mx-auto space-y-6">
-                    <h3 class="text-xl font-bold text-slate-900">Monitoring Peminjaman & Pengembalian</h3>
+                    <h3 class="text-xl font-bold text-slate-900">Monitoring Peminjaman</h3>
 
                     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
                         <div class="flex items-center justify-between gap-2">
-                            <h4 class="font-bold text-slate-800 text-base">Peminjaman Aktif</h4>
+                            <h4 class="font-bold text-slate-800 text-base">Monitoring Peminjaman</h4>
                             <span id="act-count" class="text-xs font-semibold text-slate-500"></span>
                         </div>
-                        ${filterBar('act')}
+                        ${loanFilterBar('act')}
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
                                 <thead>
@@ -1789,13 +1825,22 @@
                             </table>
                         </div>
                     </div>
+                </div>
+            `;
+            applyLoanFilter('act');
+        }
+
+        function renderAdminReturns(container) {
+            container.innerHTML = `
+                <div class="max-w-6xl mx-auto space-y-6">
+                    <h3 class="text-xl font-bold text-slate-900">Riwayat & Pengembalian</h3>
 
                     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
                         <div class="flex items-center justify-between gap-2">
                             <h4 class="font-bold text-slate-800 text-base">Riwayat Peminjaman & Pengembalian Keseluruhan</h4>
                             <span id="his-count" class="text-xs font-semibold text-slate-500"></span>
                         </div>
-                        ${filterBar('his')}
+                        ${loanFilterBar('his')}
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
                                 <thead>
@@ -1813,7 +1858,6 @@
                     </div>
                 </div>
             `;
-            applyLoanFilter('act');
             applyLoanFilter('his');
         }
 
