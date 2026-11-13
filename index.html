@@ -330,6 +330,20 @@
                 </div>
             </div>
         </div>
+        <!-- Modal Ingatkan via WhatsApp (admin) -->
+        <div id="wa-modal" class="fixed inset-0 z-50 flex items-center justify-center pop-overlay hidden p-4" onclick="if(event.target===this)closeWaModal()">
+            <div class="glass-pop rounded-2xl p-6 max-w-lg w-full shadow-2xl">
+                <h3 class="text-lg font-bold text-slate-900">Ingatkan via WhatsApp</h3>
+                <p id="wa-modal-to" class="text-xs text-slate-600 mt-1 break-words"></p>
+                <label for="wa-modal-text" class="block text-xs font-bold uppercase tracking-wide text-slate-700 mt-4 mb-1.5">Isi pesan (bisa diubah)</label>
+                <textarea id="wa-modal-text" rows="9" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"></textarea>
+                <div class="flex justify-end gap-3 mt-4">
+                    <button onclick="closeWaModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm transition">Batal</button>
+                    <button onclick="sendWaModal()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm transition"><i class="fa-brands fa-whatsapp mr-1"></i>Buka WhatsApp</button>
+                </div>
+            </div>
+        </div>
+
         <div id="img-modal" class="fixed inset-0 z-50 flex items-center justify-center pop-overlay hidden" onclick="closeImgModal()">
             <div class="relative max-w-2xl max-h-[90dvh] p-2" onclick="event.stopPropagation()">
                 <button onclick="closeImgModal()" class="absolute top-3 right-3 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-black/60 text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
@@ -1714,6 +1728,64 @@
         }
 
         // Monitoring: dua daftar (aktif & riwayat), masing-masing bisa dicari dan difilter kelas.
+        // ---------- Ingatkan via WhatsApp (dikirim manual oleh admin) ----------
+        const WA_NAMA_PERPUS = 'Perpustakaan SMAN 15 Bandung';
+        let waTarget = '';
+        window.__actList = [];
+        function loanDaysLate(b) {
+            const t = new Date(); t.setHours(0,0,0,0);
+            const d = parseDate(b.dueDate); d.setHours(0,0,0,0);
+            return Math.round((t - d) / 86400000); // >0 terlambat, <=0 belum lewat
+        }
+        function tglIndo(str) {
+            return parseDate(str).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+        function loanWaButtons(b, i) {
+            const late = loanDaysLate(b);
+            if (late < -2) return '<span class="text-slate-400">-</span>';
+            const st = DB.students.find(x => String(x.nisn) === String(b.nisn));
+            const btn = (t, label) => `<button onclick="openWaModal(${i},'${t}')" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition whitespace-nowrap"><i class="fa-brands fa-whatsapp"></i>${label}</button>`;
+            if (b.kelas === 'Guru') return btn('guru', 'Guru');
+            return `<div class="flex flex-wrap gap-1.5">${btn('siswa', 'Siswa')}${late > 0 ? btn('ortu', 'Ortu/Wali') : ''}</div>`;
+        }
+        function openWaModal(i, target) {
+            const b = window.__actList[i]; if (!b) return;
+            const st = DB.students.find(x => String(x.nisn) === String(b.nisn)) || {};
+            const hp = target === 'ortu' ? st.noHpOrtu : st.noHp;
+            const link = hp ? waLink(hp) : '';
+            if (!link || link.length < 14) {
+                showModal('No. HP belum ada', 'Nomor HP ' + (target === 'ortu' ? 'orang tua/wali' : (target === 'guru' ? 'guru' : 'siswa')) + ' belum diisi untuk ' + (b.studentName || '-') + '.', 'error');
+                return;
+            }
+            const late = loanDaysLate(b), tgl = tglIndo(b.dueDate), kelas = b.kelas === 'Guru' ? '' : ' (' + (b.kelas || '-') + ')';
+            let sapa, isi;
+            if (target === 'ortu') sapa = `Yth. Orang Tua/Wali ${b.studentName}${kelas},`;
+            else if (target === 'guru') sapa = `Yth. ${b.studentName},`;
+            else sapa = `Halo ${b.studentName}${kelas},`;
+            if (late > 0) {
+                if (target === 'ortu') {
+                    isi = `${sapa}\nbuku "${b.judulBuku}" terlambat dikembalikan ${late} hari (jatuh tempo ${tgl}).\nMohon diingatkan untuk segera mengembalikannya ke perpustakaan.\nTerima kasih. - ${WA_NAMA_PERPUS}`;
+                } else {
+                    isi = `${sapa}\n\nBuku "${b.judulBuku}" yang ${target === 'guru' ? 'Anda' : 'kamu'} pinjam sudah terlambat dikembalikan ${late} hari (jatuh tempo ${tgl}).\n\nMohon segera dikembalikan ke perpustakaan. Perpanjangan tidak bisa dilakukan untuk buku yang sudah terlambat.\n\nTerima kasih. - ${WA_NAMA_PERPUS}`;
+                }
+            } else {
+                const kapan = late === 0 ? 'hari ini' : (-late) + ' hari lagi';
+                isi = `${sapa}\n\nPengingat dari ${WA_NAMA_PERPUS}: buku "${b.judulBuku}" akan jatuh tempo ${kapan} (${tgl}).\n\nSilakan kembalikan ke perpustakaan, atau perpanjang lewat Lumitera sebelum jatuh tempo.\n\nTerima kasih.`;
+            }
+            waTarget = link;
+            const tujuan = target === 'ortu' ? 'Orang Tua/Wali ' + b.studentName : b.studentName;
+            document.getElementById('wa-modal-to').innerText = 'Kepada: ' + tujuan + (b.kelas && b.kelas !== 'Guru' ? ' (' + b.kelas + ')' : '') + ' \u00b7 ' + hp;
+            document.getElementById('wa-modal-text').value = isi;
+            document.getElementById('wa-modal').classList.remove('hidden');
+        }
+        function closeWaModal() { document.getElementById('wa-modal').classList.add('hidden'); }
+        function sendWaModal() {
+            const txt = document.getElementById('wa-modal-text').value.trim();
+            if (!txt) return;
+            window.open(waTarget + '?text=' + encodeURIComponent(txt), '_blank', 'noopener');
+            closeWaModal();
+        }
+
         function loanWhoHTML(b) {
             return `${esc(b.studentName)}<br><span class="text-xs text-slate-400 font-mono">${esc(b.nisn)}</span> <span class="text-xs text-slate-400">&middot; ${b.kelas === 'Guru' ? 'Guru' : esc(b.kelas || '-')}</span>`;
         }
@@ -1736,17 +1808,22 @@
             const badge = (cls, txt) => `<span class="px-2 py-0.5 rounded-full text-xs font-medium ${cls}">${txt}</span>`;
             let rows, cols;
             if (kind === 'act') {
-                cols = 5;
-                rows = list.map(b => {
-                    const due = parseDate(b.dueDate); due.setHours(0,0,0,0);
-                    const isLate = due < today;
+                cols = 6;
+                window.__actList = list;
+                rows = list.map((b, i) => {
+                    const late = loanDaysLate(b);
+                    const isLate = late > 0;
+                    const status = isLate ? badge('bg-rose-50 text-rose-700', `Terlambat ${late} hari`)
+                        : late >= -2 ? badge('bg-amber-50 text-amber-700', late === 0 ? 'Hampir Tempo (hari ini)' : `Hampir Tempo (${-late} hari)`)
+                        : badge('bg-emerald-50 text-emerald-700', 'Dipinjam');
                     return `
                         <tr class="hover:bg-slate-50 transition">
                             <td class="py-3 px-3 font-medium text-slate-900">${loanWhoHTML(b)}</td>
                             <td class="py-3 px-3 text-slate-800">${esc(b.judulBuku)}</td>
                             <td class="py-3 px-3 text-slate-600">${b.tglPinjam}</td>
                             <td class="py-3 px-3 font-semibold ${isLate ? 'text-rose-600' : 'text-slate-800'}">${b.dueDate}</td>
-                            <td class="py-3 px-3">${isLate ? badge('bg-rose-50 text-rose-700', 'Terlambat') : badge('bg-emerald-50 text-emerald-700', 'Dipinjam')}</td>
+                            <td class="py-3 px-3">${status}</td>
+                            <td class="py-3 px-3">${loanWaButtons(b, i)}</td>
                         </tr>`;
                 });
             } else if (kind === 'ret') {
@@ -1821,6 +1898,7 @@
                                         <th class="pb-3 px-3">Tgl Pinjam</th>
                                         <th class="pb-3 px-3">Jatuh Tempo</th>
                                         <th class="pb-3 px-3">Status</th>
+                                        <th class="pb-3 px-3">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody id="act-body" class="divide-y divide-slate-100 text-sm"></tbody>
