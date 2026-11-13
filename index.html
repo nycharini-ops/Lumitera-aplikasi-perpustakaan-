@@ -804,7 +804,7 @@
                         <div class="flex items-center space-x-4">
                             <div class="text-right hidden sm:block">
                                 <p class="text-sm font-semibold text-slate-800"><i class="fa-solid fa-circle-user mr-1.5"></i>Halo, ${esc(session.name)}</p>
-                                <p class="text-xs text-indigo-600 font-medium">${session.kelas === 'Guru' ? 'Guru' : 'Kelas ' + esc(session.kelas)}</p>
+                                <p class="text-xs text-indigo-600 font-medium">${session.kelas === 'Guru' ? 'Guru' : session.kelas === 'Lulus' ? 'Alumni (Lulus)' : 'Kelas ' + esc(session.kelas)}</p>
                             </div>
                             <button onclick="logout()" class="p-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 transition" title="Keluar"><i class="fa-solid fa-right-from-bracket"></i></button>
                         </div>
@@ -1207,6 +1207,7 @@
                             <button onclick="renderAdminTab('returns')" id="adm-btn-returns" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-clock-rotate-left w-5"></i><span class="text-[9px] tracking-tight sm:text-sm sm:tracking-normal">Riwayat & Pengembalian</span></button>
                             <button onclick="renderAdminTab('teachers')" id="adm-btn-teachers" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-user-shield w-5"></i><span>Kelola Guru</span></button>
                             <button onclick="renderAdminTab('students')" id="adm-btn-students" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-users w-5"></i><span>Kelola Siswa</span></button>
+                            <button onclick="renderAdminTab('kelas')" id="adm-btn-kelas" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-arrow-up-right-dots w-5"></i><span>Ubah Kelas</span></button>
                             <button onclick="renderAdminTab('settings')" id="adm-btn-settings" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-gear w-5"></i><span>Pengaturan</span></button>
                         </aside>
 
@@ -1219,7 +1220,7 @@
 
         let currentAdminTab = 'stats';
         async function renderAdminTab(tab) {
-            ['stats', 'books', 'monitoring', 'returns', 'teachers', 'students', 'settings'].forEach(t => {
+            ['stats', 'books', 'monitoring', 'returns', 'teachers', 'students', 'kelas', 'settings'].forEach(t => {
                 const btn = document.getElementById(`adm-btn-${t}`);
                 if (btn) {
                     btn.className = `w-full shrink-0 text-center sm:text-left px-1.5 sm:px-4 py-3 rounded-xl font-medium text-[11px] leading-tight sm:text-sm flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1.5 sm:gap-0 sm:space-x-3 transition ${t === tab ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'}`;
@@ -1238,6 +1239,7 @@
             else if (tab === 'returns') renderAdminReturns(pane);
             else if (tab === 'students') renderAdminStudents(pane);
             else if (tab === 'teachers') renderAdminTeachers(pane);
+            else if (tab === 'kelas') renderAdminKelas(pane);
             else if (tab === 'settings') renderAdminSettings(pane);
         }
 
@@ -1715,6 +1717,7 @@
         // Urutan kelas baku: Guru, lalu X-1, X-2, ... XI-1, ... XII-12.
         function kelasRank(k) {
             if (k === 'Guru') return -1;
+            if (k === 'Lulus') return 4000;
             const m = /^(XII|XI|X)-(\d+)$/.exec(String(k));
             return m ? ({ X: 1, XI: 2, XII: 3 }[m[1]]) * 1000 + Number(m[2]) : 9999;
         }
@@ -2066,6 +2069,103 @@
                 </div>
             `;
             applyTeacherFilter();
+        }
+
+        // ---------- Ubah Kelas ----------
+        // Kelas X diubah manual oleh admin. Kelas XI -> XII dan XII -> Lulus berjalan otomatis
+        // setiap 1 Juli di database (lihat supabase_kenaikan_kelas.sql).
+        function isKelasX(x) { return /^X-\d+$/.test(String(x.kelas || '')); }
+        function kelasTujuanOptions(current) {
+            let h = '';
+            ['X', 'XI'].forEach(g => {
+                h += `<optgroup label="Kelas ${g}">`;
+                for (let i = 1; i <= 12; i++) { const v = g + '-' + i; h += `<option value="${v}" ${v === current ? 'selected' : ''}>${v}</option>`; }
+                h += '</optgroup>';
+            });
+            return h;
+        }
+        function kelasRowHTML(s) {
+            const sel = 'px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500';
+            return `
+                <tr class="hover:bg-slate-50 transition" data-nisn="${esc(s.nisn)}">
+                    <td class="py-3 px-3 font-semibold text-slate-900">${esc(s.name)}</td>
+                    <td class="py-3 px-3 font-mono text-slate-700">${esc(s.nisn)}</td>
+                    <td class="py-3 px-3"><span class="px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">${esc(s.kelas)}</span></td>
+                    <td class="py-3 px-3"><select id="kls-sel-${esc(s.nisn)}" class="${sel}">${kelasTujuanOptions(s.kelas)}</select></td>
+                    <td class="py-3 px-3 text-right"><button type="button" onclick="saveKelas('${esc(s.nisn)}')" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm shadow-sm transition">Simpan</button></td>
+                </tr>`;
+        }
+        function applyKelasFilter() {
+            const q = (document.getElementById('kls-search').value || '').trim().toLowerCase();
+            const all = getDB(STORAGE_KEY_USERS).filter(isKelasX).sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'id'));
+            const list = all.filter(x => !q || (x.name || '').toLowerCase().includes(q) || String(x.nisn).includes(q));
+            const LIMIT = 100, shown = list.slice(0, LIMIT);
+            document.getElementById('kls-body').innerHTML = shown.length ? shown.map(kelasRowHTML).join('')
+                : `<tr><td colspan="5" class="py-8 text-center text-slate-400">${all.length ? 'Tidak ada siswa kelas X yang cocok.' : 'Tidak ada siswa kelas X.'}</td></tr>`;
+            document.getElementById('kls-count').innerText = (q ? `${list.length} dari ${all.length}` : `${all.length}`) + ' siswa kelas X'
+                + (list.length > LIMIT ? ` (menampilkan ${LIMIT} pertama, ketik nama untuk mempersempit)` : '');
+        }
+        function renderAdminKelas(container) {
+            const inp = 'w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500';
+            container.innerHTML = `
+                <div class="max-w-5xl mx-auto space-y-6">
+                    <h3 class="text-xl font-bold text-slate-900">Ubah Kelas Siswa</h3>
+
+                    <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 text-sm text-indigo-900 space-y-1.5">
+                        <p class="font-bold"><i class="fa-solid fa-circle-info mr-2"></i>Aturan perubahan kelas</p>
+                        <p><span class="font-semibold">Kelas X</span> &rarr; diubah manual oleh admin di halaman ini.</p>
+                        <p><span class="font-semibold">Kelas XI</span> &rarr; otomatis menjadi kelas XII (nomor kelas sama, misal XI-3 menjadi XII-3).</p>
+                        <p><span class="font-semibold">Kelas XII</span> &rarr; otomatis menjadi <span class="font-semibold">Lulus</span>.</p>
+                        <p class="text-indigo-700">Perubahan otomatis berjalan setiap <span class="font-semibold">1 Juli</span>. Sebaiknya atur kelas siswa X yang naik ke XI <span class="font-semibold">setelah 1 Juli</span>, agar tidak ikut naik lagi oleh proses otomatis.</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+                        <div class="flex items-center justify-between gap-2">
+                            <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-arrow-up-right-dots mr-2"></i>Siswa Kelas X</h4>
+                            <span id="kls-count" class="text-xs font-semibold text-slate-500"></span>
+                        </div>
+                        <input type="search" id="kls-search" oninput="applyKelasFilter()" autocomplete="off" placeholder="Cari berdasarkan nama atau NISN..." class="${inp}">
+                        <div id="kls-msg" class="hidden"></div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                                        <th class="pb-3 px-3">Nama Lengkap</th>
+                                        <th class="pb-3 px-3">NISN</th>
+                                        <th class="pb-3 px-3">Kelas Sekarang</th>
+                                        <th class="pb-3 px-3">Kelas Baru</th>
+                                        <th class="pb-3 px-3 text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="kls-body" class="divide-y divide-slate-100 text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            applyKelasFilter();
+        }
+        let kelasBusy = false;
+        async function saveKelas(nisn) {
+            if (kelasBusy) return;
+            const s = DB.students.find(x => String(x.nisn) === String(nisn));
+            const sel = document.getElementById('kls-sel-' + nisn);
+            if (!s || !sel) return;
+            const baru = sel.value;
+            if (baru === s.kelas) { showModal('Tidak Ada Perubahan', `${s.name} sudah berada di kelas ${baru}. Pilih kelas baru yang berbeda.`, 'info'); return; }
+            kelasBusy = true;
+            try {
+                await api('admin_update_kelas', { p_token: tok(), p_nisn: nisn, p_kelas: baru });
+                const lama = s.kelas;
+                s.kelas = baru;
+                applyKelasFilter();
+                const msg = document.getElementById('kls-msg');
+                if (msg) {
+                    msg.className = 'px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-800';
+                    msg.innerHTML = `<i class="fa-solid fa-check mr-1"></i>${esc(s.name)}: kelas <span class="font-semibold">${esc(lama)}</span> diubah menjadi <span class="font-semibold">${esc(baru)}</span>.`;
+                }
+            } catch (e) { handleApiError(e, 'Gagal Mengubah Kelas'); }
+            finally { kelasBusy = false; }
         }
 
         function renderAdminSettings(container) {
