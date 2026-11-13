@@ -821,7 +821,7 @@
                         <div class="flex items-center space-x-4">
                             <div class="text-right hidden sm:block">
                                 <p class="text-sm font-semibold text-slate-800"><i class="fa-solid fa-circle-user mr-1.5"></i>Halo, ${esc(session.name)}</p>
-                                <p class="text-xs text-indigo-600 font-medium">${session.kelas === 'Guru' ? 'Guru' : session.kelas === 'Lulus' ? 'Alumni (Lulus)' : 'Kelas ' + esc(session.kelas)}</p>
+                                <p class="text-xs text-indigo-600 font-medium">${session.kelas === 'Guru' ? 'Guru' : session.kelas === 'Lulus' ? 'Alumni (Lulus)' : session.kelas === 'Tamu' ? 'Tamu' : 'Kelas ' + esc(session.kelas)}</p>
                             </div>
                             <button onclick="logout()" class="p-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 transition" title="Keluar"><i class="fa-solid fa-right-from-bracket"></i></button>
                         </div>
@@ -1224,6 +1224,7 @@
                             <button onclick="renderAdminTab('returns')" id="adm-btn-returns" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-clock-rotate-left w-5"></i><span class="text-[9px] tracking-tight sm:text-sm sm:tracking-normal">Riwayat & Pengembalian</span></button>
                             <button onclick="renderAdminTab('teachers')" id="adm-btn-teachers" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-user-shield w-5"></i><span>Kelola Guru</span></button>
                             <button onclick="renderAdminTab('students')" id="adm-btn-students" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-users w-5"></i><span>Kelola Siswa</span></button>
+                            <button onclick="renderAdminTab('tamu')" id="adm-btn-tamu" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-user-plus w-5"></i><span>Kelola Tamu</span></button>
                             <button onclick="renderAdminTab('kelas')" id="adm-btn-kelas" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-arrow-up-right-dots w-5"></i><span>Ubah Kelas</span></button>
                             <button onclick="renderAdminTab('settings')" id="adm-btn-settings" class="w-full text-left px-4 py-3 rounded-xl font-medium text-sm flex items-center space-x-3 transition"><i class="fa-solid fa-gear w-5"></i><span>Pengaturan</span></button>
                         </aside>
@@ -1237,7 +1238,7 @@
 
         let currentAdminTab = 'stats';
         async function renderAdminTab(tab) {
-            ['stats', 'books', 'monitoring', 'returns', 'teachers', 'students', 'kelas', 'settings'].forEach(t => {
+            ['stats', 'books', 'monitoring', 'returns', 'teachers', 'students', 'tamu', 'kelas', 'settings'].forEach(t => {
                 const btn = document.getElementById(`adm-btn-${t}`);
                 if (btn) {
                     btn.className = `w-full shrink-0 text-center sm:text-left px-1.5 sm:px-4 py-3 rounded-xl font-medium text-[11px] leading-tight sm:text-sm flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1.5 sm:gap-0 sm:space-x-3 transition ${t === tab ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'}`;
@@ -1256,12 +1257,13 @@
             else if (tab === 'returns') renderAdminReturns(pane);
             else if (tab === 'students') renderAdminStudents(pane);
             else if (tab === 'teachers') renderAdminTeachers(pane);
+            else if (tab === 'tamu') renderAdminGuests(pane);
             else if (tab === 'kelas') renderAdminKelas(pane);
             else if (tab === 'settings') renderAdminSettings(pane);
         }
 
         function renderAdminStats(container) {
-            const students = getDB(STORAGE_KEY_USERS);
+            const students = getDB(STORAGE_KEY_USERS).filter(x => x.kelas !== 'Tamu');
             const books = getDB(STORAGE_KEY_BOOKS);
             const borrowings = getDB(STORAGE_KEY_BORROW).filter(b => !b.returned);
 
@@ -1769,6 +1771,7 @@
             const st = DB.students.find(x => String(x.nisn) === String(b.nisn));
             const btn = (t, label) => `<button onclick="openWaModal(${i},'${t}')" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition whitespace-nowrap"><i class="fa-brands fa-whatsapp"></i>${label}</button>`;
             if (b.kelas === 'Guru') return btn('guru', 'Guru');
+            if (b.kelas === 'Tamu') return btn('siswa', 'Tamu');
             return `<div class="flex flex-wrap gap-1.5">${btn('siswa', 'Siswa')}${late > 0 ? btn('ortu', 'Ortu/Wali') : ''}</div>`;
         }
         function openWaModal(i, target) {
@@ -1780,7 +1783,7 @@
                 showModal('No. HP belum ada', 'Nomor HP ' + (target === 'ortu' ? 'orang tua/wali' : (target === 'guru' ? 'guru' : 'siswa')) + ' belum diisi untuk ' + (b.studentName || '-') + '.', 'error');
                 return;
             }
-            const late = loanDaysLate(b), tgl = tglIndo(b.dueDate), kelas = b.kelas === 'Guru' ? '' : ' (' + (b.kelas || '-') + ')';
+            const late = loanDaysLate(b), tgl = tglIndo(b.dueDate), kelas = (b.kelas === 'Guru' || b.kelas === 'Tamu') ? '' : ' (' + (b.kelas || '-') + ')';
             let sapa, isi;
             if (target === 'ortu') sapa = `Yth. Orang Tua/Wali ${b.studentName}${kelas},`;
             else if (target === 'guru') sapa = `Yth. ${b.studentName},`;
@@ -2000,7 +2003,7 @@
         function applyStudentFilter() {
             const q = (document.getElementById('stu-search').value || '').trim().toLowerCase();
             const k = document.getElementById('stu-kelas').value;
-            const all = getDB(STORAGE_KEY_USERS).filter(x => !isTeacherRow(x));
+            const all = getDB(STORAGE_KEY_USERS).filter(x => !isTeacherRow(x) && x.kelas !== 'Tamu');
             const list = all.filter(x => (!k || x.kelas === k) && (!q || (x.name || '').toLowerCase().includes(q) || String(x.nisn).includes(q)));
             document.getElementById('stu-body').innerHTML = list.length ? list.map(adminStudentRowHTML).join('')
                 : `<tr><td colspan="7" class="py-8 text-center text-slate-400">Tidak ada siswa yang cocok.</td></tr>`;
@@ -2016,7 +2019,7 @@
         }
         function renderAdminStudents(container) {
             const everyone = getDB(STORAGE_KEY_USERS);
-            const kelasList = allKelas(everyone.filter(x => !isTeacherRow(x)).map(x => x.kelas), false);
+            const kelasList = allKelas(everyone.filter(x => !isTeacherRow(x) && x.kelas !== 'Tamu').map(x => x.kelas), false);
             const inp = 'w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500';
             container.innerHTML = `
                 <div class="max-w-6xl mx-auto space-y-6">
@@ -2185,6 +2188,138 @@
             finally { kelasBusy = false; }
         }
 
+        // ---------- Kelola Tamu ----------
+        // Akun tamu dibuat oleh admin (nama, no. WhatsApp, asal sekolah, status). Sistem membuat ID login
+        // dan password otomatis; password hanya tampil sekali, tepat setelah akun dibuat.
+        const TAMU_STATUS = ['Siswa', 'Guru', 'Mahasiswa', 'Umum'];
+        function isGuestRow(x) { return x.kelas === 'Tamu'; }
+        function guestRowHTML(s) {
+            return `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="py-3 px-3 font-mono font-bold text-slate-800">${esc(s.nisn)}</td>
+                    <td class="py-3 px-3 font-semibold text-slate-900">${esc(s.name)}</td>
+                    <td class="py-3 px-3 whitespace-nowrap">${phoneCellHTML(s.noHp)}</td>
+                    <td class="py-3 px-3 text-slate-700">${s.asalSekolah ? esc(s.asalSekolah) : '-'}</td>
+                    <td class="py-3 px-3"><span class="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700">${s.statusTamu ? esc(s.statusTamu) : '-'}</span></td>
+                    <td class="py-3 px-3 text-right sticky right-0 bg-white">
+                        <button onclick="deleteStudent('${esc(s.nisn)}')" class="p-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 rounded-xl transition" title="Hapus Akun Tamu"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>`;
+        }
+        function applyGuestFilter() {
+            const q = (document.getElementById('tamu-search').value || '').trim().toLowerCase();
+            const all = getDB(STORAGE_KEY_USERS).filter(isGuestRow);
+            const list = all.filter(x => !q || (x.name || '').toLowerCase().includes(q) || String(x.nisn).includes(q)
+                || (x.asalSekolah || '').toLowerCase().includes(q) || (x.statusTamu || '').toLowerCase().includes(q));
+            document.getElementById('tamu-body').innerHTML = list.length ? list.map(guestRowHTML).join('')
+                : `<tr><td colspan="6" class="py-8 text-center text-slate-400">${all.length ? 'Tidak ada tamu yang cocok.' : 'Belum ada akun tamu.'}</td></tr>`;
+            document.getElementById('tamu-count').innerText = q ? `${list.length} dari ${all.length} tamu` : `${all.length} tamu`;
+        }
+        function renderAdminGuests(container) {
+            const inp = 'w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500';
+            const lbl = 'block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5';
+            container.innerHTML = `
+                <div class="max-w-6xl mx-auto space-y-6">
+                    <h3 class="text-xl font-bold text-slate-900">Kelola Akun Tamu</h3>
+
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+                        <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-user-plus mr-2"></i>Buat Akun Tamu Baru</h4>
+                        <form id="tamu-form" onsubmit="createGuest(event)" class="space-y-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div><label class="${lbl}" for="tamu-name">Nama Lengkap</label><input type="text" id="tamu-name" required autocomplete="off" maxlength="80" class="${inp}" placeholder="Nama lengkap tamu"></div>
+                                <div><label class="${lbl}" for="tamu-hp">No. WhatsApp</label><input type="tel" id="tamu-hp" required inputmode="tel" maxlength="16" autocomplete="off" class="${inp}" placeholder="Contoh: 081234567890"></div>
+                                <div><label class="${lbl}" for="tamu-sekolah">Asal Sekolah</label><input type="text" id="tamu-sekolah" required autocomplete="off" maxlength="100" class="${inp}" placeholder="Contoh: SMAN 1 Bandung"></div>
+                                <div><label class="${lbl}" for="tamu-status">Status</label>
+                                    <select id="tamu-status" required class="${inp}">
+                                        <option value="">Pilih Status</option>
+                                        ${TAMU_STATUS.map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join('')}
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" id="tamu-submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm shadow-sm transition">Buat Akun Tamu</button>
+                        </form>
+                        <div id="tamu-result" class="hidden"></div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+                        <div class="flex items-center justify-between gap-2">
+                            <h4 class="text-base font-bold text-slate-900"><i class="fa-solid fa-address-card mr-2"></i>Daftar Tamu</h4>
+                            <span id="tamu-count" class="text-xs font-semibold text-slate-500"></span>
+                        </div>
+                        <input type="search" id="tamu-search" oninput="applyGuestFilter()" autocomplete="off" placeholder="Cari nama, ID, asal sekolah, atau status..." class="${inp}">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-200 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                                        <th class="pb-3 px-3 whitespace-nowrap">ID Login</th>
+                                        <th class="pb-3 px-3">Nama</th>
+                                        <th class="pb-3 px-3 whitespace-nowrap">No. WhatsApp</th>
+                                        <th class="pb-3 px-3 whitespace-nowrap">Asal Sekolah</th>
+                                        <th class="pb-3 px-3">Status</th>
+                                        <th class="pb-3 px-3 text-right">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tamu-body" class="divide-y divide-slate-100 text-sm"></tbody>
+                            </table>
+                        </div>
+                        <p class="text-xs text-slate-500">Lupa password tamu? Atur ulang lewat menu Pengaturan &rarr; Ubah Password Siswa / Guru (cari berdasarkan nama atau ID).</p>
+                    </div>
+                </div>
+            `;
+            applyGuestFilter();
+        }
+        let guestBusy = false;
+        async function createGuest(e) {
+            if (e && e.preventDefault) e.preventDefault();
+            if (guestBusy) return;
+            const val = id => (document.getElementById(id).value || '').trim();
+            const name = val('tamu-name'), sekolah = val('tamu-sekolah'), status = val('tamu-status'), hp = cleanPhone(val('tamu-hp'));
+            if (name.length < 2) { showModal('Data Belum Lengkap', 'Isi nama lengkap tamu.', 'error'); return; }
+            if (!hp) { showModal('No. WhatsApp Tidak Valid', 'Gunakan format seperti 081234567890.', 'error'); return; }
+            if (sekolah.length < 2) { showModal('Data Belum Lengkap', 'Isi asal sekolah tamu.', 'error'); return; }
+            if (!status) { showModal('Data Belum Lengkap', 'Pilih status tamu.', 'error'); return; }
+            guestBusy = true;
+            const btn = document.getElementById('tamu-submit');
+            if (btn) { btn.disabled = true; btn.innerText = 'Memproses...'; }
+            try {
+                const r = await api('admin_create_guest', { p_token: tok(), p_name: name, p_no_hp: hp, p_asal_sekolah: sekolah, p_status: status });
+                DB.students.unshift({ nisn: r.nisn, name: name, kelas: 'Tamu', noHp: hp, asalSekolah: sekolah, statusTamu: status });
+                const form = document.getElementById('tamu-form'); if (form) form.reset();
+                applyGuestFilter();
+                showGuestResult(r.nisn, r.password, name, hp);
+            } catch (err) { handleApiError(err, 'Gagal Membuat Akun Tamu'); }
+            finally {
+                guestBusy = false;
+                const b2 = document.getElementById('tamu-submit');
+                if (b2) { b2.disabled = false; b2.innerText = 'Buat Akun Tamu'; }
+            }
+        }
+        function showGuestResult(nisn, password, name, hp) {
+            const url = location.origin + location.pathname;
+            const info = `Halo ${name}, akun Lumitera (${WA_NAMA_PERPUS}) Anda sudah dibuat.\n\nID Login: ${nisn}\nPassword: ${password}\n\nSilakan login di ${url}\nSimpan data ini dan jangan dibagikan ke orang lain.`;
+            window.__guestInfo = info;
+            const box = document.getElementById('tamu-result');
+            if (!box) return;
+            box.className = 'p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-3';
+            box.innerHTML = `
+                <p class="text-sm font-bold text-emerald-800"><i class="fa-solid fa-check mr-1"></i>Akun tamu untuk ${esc(name)} berhasil dibuat</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    <div class="px-4 py-2.5 bg-white rounded-xl border border-emerald-200"><p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">ID Login</p><p class="font-mono font-bold text-slate-900 select-all">${esc(nisn)}</p></div>
+                    <div class="px-4 py-2.5 bg-white rounded-xl border border-emerald-200"><p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Password</p><p class="font-mono font-bold text-slate-900 select-all">${esc(password)}</p></div>
+                </div>
+                <p class="text-xs text-emerald-800">Password hanya tampil sekarang. Catat atau kirim ke tamu sebelum menutup halaman ini.</p>
+                <div class="flex flex-wrap gap-2">
+                    <a href="${waLink(hp)}?text=${encodeURIComponent(info)}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition"><i class="fa-brands fa-whatsapp"></i>Kirim via WhatsApp</a>
+                    <button type="button" onclick="copyGuestInfo()" class="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition"><i class="fa-solid fa-copy mr-1.5"></i><span id="tamu-copy-label">Salin Info Akun</span></button>
+                </div>`;
+        }
+        function copyGuestInfo() {
+            const t = window.__guestInfo || '';
+            const done = () => { const b = document.getElementById('tamu-copy-label'); if (b) { b.innerText = 'Tersalin!'; setTimeout(() => { b.innerText = 'Salin Info Akun'; }, 1500); } };
+            if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(t).then(done, done); }
+            else { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} ta.remove(); done(); }
+        }
+
         function renderAdminSettings(container) {
             resetPick = null;
             const students = getDB(STORAGE_KEY_USERS);
@@ -2274,7 +2409,7 @@
             showModal('Konfirmasi Hapus Akun', `Hapus akun dengan NISN/NIP ${nisn}? Riwayat peminjamannya juga ikut terhapus.`, 'info', async () => {
                 try {
                     await api('admin_delete_student', { p_token: tok(), p_nisn: nisn });
-                    showModal('Berhasil', 'Akun berhasil dihapus.', 'success', () => { renderAdminTab('students'); });
+                    showModal('Berhasil', 'Akun berhasil dihapus.', 'success', () => { renderAdminTab(currentAdminTab || 'students'); });
                 } catch (err) { handleApiError(err); }
             });
         }
