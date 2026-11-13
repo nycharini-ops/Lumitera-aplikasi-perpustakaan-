@@ -1003,7 +1003,7 @@
                             <div class="mt-2">${statusBadge}</div>
                             <div class="mt-3 flex flex-wrap gap-2">
                                 <button onclick="returnBook('${b.id}')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs rounded-xl shadow-sm transition">Kembalikan</button>
-                                ${b.renewCount < 2 && !isLate ? `<button onclick="renewBook('${b.id}')" class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-medium text-xs rounded-xl transition">Perpanjang</button>` : ''}
+                                ${b.renewCount < MAX_RENEW && !isLate ? `<button onclick="renewBook('${b.id}')" class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-medium text-xs rounded-xl transition">Perpanjang</button>` : ''}
                             </div>
                         </div>
                     </div>`;
@@ -1044,12 +1044,15 @@
             } finally { returnBusy = false; }
         }
 
+        // Perpanjangan: selalu 7 hari (tidak mengikuti lama pinjam awal), maksimal 2x
+        const RENEW_DAYS = 7;
+        const MAX_RENEW = 2;
         function renewBook(borrowId) {
             const item = getDB(STORAGE_KEY_BORROW).find(b => b.id === borrowId);
             if (!item) return;
 
-            if (item.renewCount >= 2) {
-                showModal('Batas Perpanjangan', 'Buku ini sudah mencapai batas maksimal perpanjangan (2x).', 'error');
+            if (item.renewCount >= MAX_RENEW) {
+                showModal('Batas Perpanjangan', 'Buku ini sudah mencapai batas maksimal perpanjangan (' + MAX_RENEW + 'x).', 'error');
                 return;
             }
 
@@ -1062,7 +1065,7 @@
                 return;
             }
 
-            showModal('Konfirmasi Perpanjangan', `Perpanjangan akan menambah ${loanLabel(item.loanPeriod || 7)} (${item.loanPeriod || 7} hari) dari tanggal jatuh tempo saat ini. Lanjutkan?`, 'info', async () => {
+            showModal('Konfirmasi Perpanjangan', `Perpanjangan akan menambah ${RENEW_DAYS} hari dari tanggal jatuh tempo saat ini (perpanjangan ke-${item.renewCount + 1} dari maksimal ${MAX_RENEW}x). Lanjutkan?`, 'info', async () => {
                 try {
                     const r = await api('renew_book', { p_token: tok(), p_id: borrowId });
                     showModal('Berhasil Diperpanjang', `Masa pinjam diperpanjang hingga ${r.dueDate} (Perpanjangan ke-${r.renewCount})`, 'success', () => {
