@@ -787,6 +787,11 @@
                 .catch(err => showModal('Pendaftaran Gagal', err.message, 'error'));
         }
 
+        // Nama panjang (lebih dari 12 karakter) dipersingkat menjadi nama depan saja, dipakai di header HP.
+        function namaDepan(n) {
+            const t = String(n || '').trim().replace(/\s+/g, ' ');
+            return t.length > 12 ? t.split(' ')[0] : t;
+        }
         async function renderStudentDashboard(activeTab = 'borrow') {
             const session = getCurrentSession();
             if (!session || session.role !== 'student') { renderLogin(); return; }
@@ -819,9 +824,13 @@
                             </div>
                         </div>
                         <div class="flex items-center space-x-4">
+                            <div class="text-right sm:hidden leading-tight">
+                                <p class="text-xs font-semibold text-slate-800 truncate max-w-[8.5rem]">Halo, ${esc(namaDepan(session.name))}</p>
+                                <p class="text-[11px] text-indigo-600 font-medium">${session.kelas === 'Lulus' ? 'Alumni' : esc(session.kelas)}</p>
+                            </div>
                             <div class="text-right hidden sm:block">
                                 <p class="text-sm font-semibold text-slate-800"><i class="fa-solid fa-circle-user mr-1.5"></i>Halo, ${esc(session.name)}</p>
-                                <p class="text-xs text-indigo-600 font-medium">${session.kelas === 'Guru' ? 'Guru' : session.kelas === 'Lulus' ? 'Alumni (Lulus)' : session.kelas === 'Tamu' ? 'Tamu' : 'Kelas ' + esc(session.kelas)}</p>
+                                <p class="text-xs text-indigo-600 font-medium">${session.kelas === 'Guru' ? 'Guru' : session.kelas === 'Lulus' ? 'Alumni' : session.kelas === 'Tamu' ? 'Tamu' : 'Kelas ' + esc(session.kelas)}</p>
                             </div>
                             <button onclick="logout()" class="p-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 transition" title="Keluar"><i class="fa-solid fa-right-from-bracket"></i></button>
                         </div>
@@ -1211,6 +1220,7 @@
                             </div>
                         </div>
                         <div class="flex items-center space-x-4">
+                            <span class="sm:hidden text-xs font-semibold text-slate-800">Administrator</span>
                             <span class="hidden sm:inline text-sm font-semibold text-slate-800">Administrator</span>
                             <button onclick="logout()" class="p-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 transition" title="Keluar"><i class="fa-solid fa-right-from-bracket"></i></button>
                         </div>
